@@ -1,42 +1,45 @@
 import os
-import io
+import asyncio
 import tempfile
-from openai import OpenAI
-import pygame
 import threading
 import queue
 import time
+import edge_tts
+import pygame
 
 class TTSEngine:
     VOICES = {
-        'alloy': 'нейтральный',
-        'echo': 'мужской глубокий', 
-        'fable': 'британский акцент',
-        'onyx': 'мужской авторитетный',
-        'nova': 'женский энергичный',
-        'shimmer': 'женский мягкий'
+        'ru_female_1': 'ru-RU-SvetlanaNeural',
+        'ru_female_2': 'ru-RU-DariyaNeural', 
+        'ru_male_1': 'ru-RU-DmitryNeural',
+        'en_female_1': 'en-US-JennyNeural',
+        'en_female_2': 'en-US-AriaNeural',
+        'en_male_1': 'en-US-GuyNeural',
     }
     
     EMOTIONS = {
         'neutral': '',
-        'excited': '! ',
-        'sad': '... ',
-        'sarcastic': '~ ',
-        'supportive': ', ',
-        'angry': '! '
+        'excited': 'cheerful',
+        'sad': 'sad',
+        'sarcastic': 'disgruntled',
+        'supportive': 'friendly',
+        'angry': 'angry'
     }
     
-    def __init__(self, voice: str = 'nova', speed: float = 1.0):
-        self.client = OpenAI()
-        self.voice = voice if voice in self.VOICES else 'nova'
-        self.speed = max(0.25, min(4.0, speed))
+    def __init__(self, voice: str = 'ru_female_1', rate: str = '+0%', volume: str = '+0%'):
+        self.voice = self.VOICES.get(voice, 'ru-RU-SvetlanaNeural')
+        self.rate = rate
+        self.volume = volume
         self.audio_queue = queue.Queue()
         self.is_speaking = False
         self._init_pygame()
         self._start_audio_thread()
         
     def _init_pygame(self):
-        pygame.mixer.init(frequency=24000, size=-16, channels=1, buffer=2048)
+        try:
+            pygame.mixer.init(frequency=24000, size=-16, channels=1, buffer=2048)
+        except Exception as e:
+            print(f"[TTS] Ошибка инициализации pygame: {e}")
         
     def _start_audio_thread(self):
         self.audio_thread = threading.Thread(target=self._audio_worker, daemon=True)
@@ -45,75 +48,67 @@ class TTSEngine:
     def _audio_worker(self):
         while True:
             try:
-                audio_data, callback = self.audio_queue.get()
-                if audio_data is None:
+                audio_path, callback = self.audio_queue.get()
+                if audio_path is None:
                     break
-                self._play_audio(audio_data)
+                self._play_audio(audio_path)
                 if callback:
                     callback()
             except Exception as e:
                 print(f"[TTS] Ошибка воспроизведения: {e}")
                 
-    def _play_audio(self, audio_data: bytes):
+    def _play_audio(self, audio_path: str):
         self.is_speaking = True
         try:
-            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
-                f.write(audio_data)
-                temp_path = f.name
-            
-            pygame.mixer.music.load(temp_path)
+            pygame.mixer.music.load(audio_path)
             pygame.mixer.music.play()
             
             while pygame.mixer.music.get_busy():
                 time.sleep(0.1)
                 
-            os.unlink(temp_path)
+            try:
+                os.unlink(audio_path)
+            except:
+                pass
         except Exception as e:
             print(f"[TTS] Ошибка воспроизведения аудио: {e}")
         finally:
             self.is_speaking = False
             
+    async def _generate_speech_async(self, text: str, emotion: str = 'neutral') -> str:
+        style = self.EMOTIONS.get(emotion, '')
+        
+        communicate = edge_tts.Communicate(
+            text=text,
+            voice=self.voice,
+            rate=self.rate,
+            volume=self.volume
+        )
+        
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
+            temp_path = f.name
+            
+        await communicate.save(temp_path)
+        return temp_path
+        
     def speak(self, text: str, emotion: str = 'neutral', callback=None, priority: bool = False):
         if not text or not text.strip():
             return
             
-        text = self._apply_emotion(text, emotion)
-        
         try:
-            response = self.client.audio.speech.create(
-                model="tts-1-hd",
-                voice=self.voice,
-                input=text,
-                speed=self.speed,
-                response_format="mp3"
-            )
-            
-            audio_data = response.content
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            audio_path = loop.run_until_complete(self._generate_speech_async(text, emotion))
+            loop.close()
             
             if priority:
                 self.stop()
                 
-            self.audio_queue.put((audio_data, callback))
+            self.audio_queue.put((audio_path, callback))
             
         except Exception as e:
             print(f"[TTS] Ошибка генерации речи: {e}")
             
-    def _apply_emotion(self, text: str, emotion: str) -> str:
-        prefix = self.EMOTIONS.get(emotion, '')
-        
-        emotion_hints = {
-            'excited': '*с воодушевлением* ',
-            'sad': '*грустно* ',
-            'sarcastic': '*саркастично* ',
-            'supportive': '*поддерживающе* ',
-            'angry': '*раздражённо* '
-        }
-        
-        if emotion in emotion_hints and emotion != 'neutral':
-            text = emotion_hints[emotion] + text
-            
-        return text
-        
     def speak_async(self, text: str, emotion: str = 'neutral'):
         thread = threading.Thread(target=self.speak, args=(text, emotion))
         thread.start()
@@ -123,18 +118,23 @@ class TTSEngine:
         pygame.mixer.music.stop()
         while not self.audio_queue.empty():
             try:
-                self.audio_queue.get_nowait()
+                path, _ = self.audio_queue.get_nowait()
+                if path:
+                    try:
+                        os.unlink(path)
+                    except:
+                        pass
             except queue.Empty:
                 break
                 
     def set_voice(self, voice: str):
         if voice in self.VOICES:
-            self.voice = voice
+            self.voice = self.VOICES[voice]
             return True
         return False
         
-    def set_speed(self, speed: float):
-        self.speed = max(0.25, min(4.0, speed))
+    def set_rate(self, rate: str):
+        self.rate = rate
         
     def get_available_voices(self) -> dict:
         return self.VOICES.copy()
@@ -144,7 +144,7 @@ class TTSEngine:
         
 
 if __name__ == "__main__":
-    tts = TTSEngine(voice='nova')
+    tts = TTSEngine(voice='ru_female_1')
     tts.speak("Привет! Я Ирис, твой AI-компаньон для стримов!", emotion='excited')
     while tts.is_busy():
         time.sleep(0.1)

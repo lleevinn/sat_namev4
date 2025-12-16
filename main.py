@@ -21,8 +21,8 @@ class IrisAssistant:
         print("🌸 Запуск Ирис - AI Stream Companion")
         print("=" * 50)
         
-        self.tts = TTSEngine(voice='nova', speed=1.0)
-        self.brain = IrisBrain(model='gpt-4o', temperature=0.9)
+        self.tts = TTSEngine(voice='ru_female_1', rate='+10%')
+        self.brain = IrisBrain(model='llama-3.3-70b-versatile', temperature=0.9)
         self.audio_controller = WindowsAudioController()
         self.achievements = AchievementSystem(achievement_callback=self._on_achievement)
         
@@ -97,7 +97,10 @@ class IrisAssistant:
         elif event.event_type == 'round_end':
             won = event.data.get('won', False)
             clutch = event.data.get('clutch_win', False)
-            self.achievements.record_round_win(clutch=clutch) if won else self.achievements.record_round_loss()
+            if won:
+                self.achievements.record_round_win(clutch=clutch)
+            else:
+                self.achievements.record_round_loss()
             response = self.brain.react_to_round_end(event.data)
             emotion = 'excited' if won else 'supportive'
             
@@ -186,6 +189,10 @@ class IrisAssistant:
         else:
             print("\n[IRIS] STREAMELEMENTS_JWT_TOKEN не настроен - чат недоступен")
             
+        groq_key = os.getenv('GROQ_API_KEY', '')
+        if not groq_key:
+            print("\n[IRIS] ⚠️ GROQ_API_KEY не настроен - AI будет использовать fallback ответы")
+            
         print("\n[IRIS] Запуск голосового ввода...")
         self.voice.start_listening()
         
@@ -243,14 +250,6 @@ class IrisAssistant:
             
 
 def main():
-    openai_key = os.getenv('OPENAI_API_KEY')
-    if not openai_key:
-        print("=" * 50)
-        print("⚠️ OPENAI_API_KEY не настроен!")
-        print("Установите переменную окружения OPENAI_API_KEY")
-        print("=" * 50)
-        return
-        
     iris = IrisAssistant()
     iris.run()
     

@@ -1,65 +1,57 @@
 import os
-import io
 import time
-import wave
-import tempfile
 import threading
 import queue
-from openai import OpenAI
-import numpy as np
 
+try:
+    import speech_recognition as sr
+    SR_AVAILABLE = True
+except ImportError:
+    SR_AVAILABLE = False
+    print("[VOICE] SpeechRecognition не установлен")
+
+PYAUDIO_AVAILABLE = False
 try:
     import pyaudio
     PYAUDIO_AVAILABLE = True
 except ImportError:
-    PYAUDIO_AVAILABLE = False
     print("[VOICE] PyAudio не установлен - голосовое управление через микрофон недоступно")
 
 class VoiceRecognition:
-    WAKE_WORDS = ['ирис', 'iris', 'ирисик', 'эй ирис', 'hey iris']
+    WAKE_WORDS = ['ирис', 'iris', 'ирисик', 'эй ирис', 'hey iris', 'ириска']
     
     def __init__(self, 
                  wake_word_callback=None,
                  command_callback=None,
-                 sample_rate: int = 16000,
-                 chunk_duration: float = 3.0,
-                 silence_threshold: float = 500,
-                 silence_duration: float = 1.5):
+                 language: str = "ru-RU"):
         
-        self.client = OpenAI()
         self.wake_word_callback = wake_word_callback
         self.command_callback = command_callback
-        self.sample_rate = sample_rate
-        self.chunk_duration = chunk_duration
-        self.silence_threshold = silence_threshold
-        self.silence_duration = silence_duration
+        self.language = language
         
         self.is_listening = False
-        self.is_wake_word_detected = False
         self.conversation_mode = False
         self.conversation_timeout = 30.0
         self.last_interaction_time = 0
         
-        self.audio_queue = queue.Queue()
-        self.result_queue = queue.Queue()
-        
-        if PYAUDIO_AVAILABLE:
-            self.pyaudio = pyaudio.PyAudio()
+        if SR_AVAILABLE and PYAUDIO_AVAILABLE:
+            self.recognizer = sr.Recognizer()
+            self.recognizer.energy_threshold = 300
+            self.recognizer.dynamic_energy_threshold = True
+            self.recognizer.pause_threshold = 0.8
         else:
-            self.pyaudio = None
+            self.recognizer = None
+            
+        self.listen_thread = None
             
     def start_listening(self):
-        if not PYAUDIO_AVAILABLE:
+        if not SR_AVAILABLE or not PYAUDIO_AVAILABLE:
             print("[VOICE] Микрофон недоступен - используйте текстовый ввод")
             return False
             
         self.is_listening = True
-        
         self.listen_thread = threading.Thread(target=self._listen_loop, daemon=True)
-        self.process_thread = threading.Thread(target=self._process_loop, daemon=True)
-        
         self.listen_thread.start()
-        self.process_thread.start()
         
         print("[VOICE] Слушаю... Скажите 'Ирис' для активации")
         return True
@@ -70,98 +62,53 @@ class VoiceRecognition:
         
     def _listen_loop(self):
         try:
-            stream = self.pyaudio.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=self.sample_rate,
-                input=True,
-                frames_per_buffer=1024
-            )
-            
-            while self.is_listening:
-                frames = []
-                silent_chunks = 0
-                has_speech = False
-                
-                chunk_samples = int(self.sample_rate * self.chunk_duration)
-                silence_samples = int(self.sample_rate * self.silence_duration)
+            with sr.Microphone() as source:
+                print("[VOICE] Калибровка микрофона...")
+                self.recognizer.adjust_for_ambient_noise(source, duration=1)
+                print("[VOICE] Готов к прослушиванию!")
                 
                 while self.is_listening:
-                    data = stream.read(1024, exception_on_overflow=False)
-                    frames.append(data)
-                    
-                    audio_data = np.frombuffer(data, dtype=np.int16)
-                    volume = np.abs(audio_data).mean()
-                    
-                    if volume > self.silence_threshold:
-                        has_speech = True
-                        silent_chunks = 0
-                    else:
-                        silent_chunks += 1
+                    try:
+                        audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=10)
                         
-                    total_samples = len(frames) * 1024
-                    
-                    if has_speech and silent_chunks * 1024 > silence_samples:
-                        break
+                        threading.Thread(
+                            target=self._process_audio, 
+                            args=(audio,),
+                            daemon=True
+                        ).start()
                         
-                    if total_samples > chunk_samples * 3:
-                        break
+                    except sr.WaitTimeoutError:
+                        if self.conversation_mode:
+                            if time.time() - self.last_interaction_time > self.conversation_timeout:
+                                self.conversation_mode = False
+                                print("[VOICE] Режим разговора завершён по таймауту")
+                        continue
+                    except Exception as e:
+                        print(f"[VOICE] Ошибка прослушивания: {e}")
+                        continue
                         
-                if frames and has_speech:
-                    audio_bytes = b''.join(frames)
-                    self.audio_queue.put(audio_bytes)
-                    
-            stream.stop_stream()
-            stream.close()
-            
         except Exception as e:
-            print(f"[VOICE] Ошибка записи: {e}")
+            print(f"[VOICE] Критическая ошибка: {e}")
             
-    def _process_loop(self):
-        while self.is_listening:
-            try:
-                audio_bytes = self.audio_queue.get(timeout=1.0)
-                text = self._transcribe(audio_bytes)
-                
-                if text:
-                    self._handle_transcription(text)
-                    
-            except queue.Empty:
-                if self.conversation_mode:
-                    if time.time() - self.last_interaction_time > self.conversation_timeout:
-                        self.conversation_mode = False
-                        print("[VOICE] Режим разговора завершён по таймауту")
-                        
-            except Exception as e:
-                print(f"[VOICE] Ошибка обработки: {e}")
-                
-    def _transcribe(self, audio_bytes: bytes) -> str:
+    def _process_audio(self, audio):
         try:
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
-                with wave.open(f.name, 'wb') as wav:
-                    wav.setnchannels(1)
-                    wav.setsampwidth(2)
-                    wav.setframerate(self.sample_rate)
-                    wav.writeframes(audio_bytes)
-                temp_path = f.name
-                
-            with open(temp_path, 'rb') as audio_file:
-                response = self.client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    language="ru"
-                )
-                
-            os.unlink(temp_path)
-            return response.text.strip().lower()
+            text = self.recognizer.recognize_google(audio, language=self.language)
+            text = text.lower().strip()
             
+            if not text:
+                return
+                
+            print(f"[VOICE] Распознано: {text}")
+            self._handle_transcription(text)
+            
+        except sr.UnknownValueError:
+            pass
+        except sr.RequestError as e:
+            print(f"[VOICE] Ошибка сервиса распознавания: {e}")
         except Exception as e:
-            print(f"[VOICE] Ошибка транскрипции: {e}")
-            return ""
+            print(f"[VOICE] Ошибка обработки: {e}")
             
     def _handle_transcription(self, text: str):
-        print(f"[VOICE] Распознано: {text}")
-        
         if self.conversation_mode:
             self.last_interaction_time = time.time()
             if self.command_callback:
@@ -189,19 +136,6 @@ class VoiceRecognition:
                     
                 return
                 
-    def transcribe_file(self, file_path: str) -> str:
-        try:
-            with open(file_path, 'rb') as audio_file:
-                response = self.client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    language="ru"
-                )
-            return response.text.strip()
-        except Exception as e:
-            print(f"[VOICE] Ошибка транскрипции файла: {e}")
-            return ""
-            
     def set_conversation_mode(self, enabled: bool):
         self.conversation_mode = enabled
         if enabled:
@@ -237,3 +171,4 @@ class TextInputFallback:
                 break
             except Exception as e:
                 print(f"[TEXT] Ошибка ввода: {e}")
+                time.sleep(1)

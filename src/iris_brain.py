@@ -1,7 +1,7 @@
 import os
 import time
 import random
-from openai import OpenAI
+from groq import Groq
 from typing import Dict, List, Optional, Any
 from collections import deque
 from dataclasses import dataclass
@@ -36,11 +36,17 @@ class IrisBrain:
 Контекст: ты помогаешь на стриме CS2. Ты знаешь про убийства, смерти, раунды, бомбу и другие игровые события."""
 
     def __init__(self, 
-                 model: str = "gpt-4o",
+                 model: str = "llama-3.3-70b-versatile",
                  max_context_messages: int = 20,
                  temperature: float = 0.9):
         
-        self.client = OpenAI()
+        api_key = os.getenv('GROQ_API_KEY')
+        if not api_key:
+            print("[IRIS BRAIN] GROQ_API_KEY не настроен!")
+            self.client = None
+        else:
+            self.client = Groq(api_key=api_key)
+            
         self.model = model
         self.temperature = temperature
         
@@ -123,6 +129,9 @@ class IrisBrain:
                           event_type: str = "general",
                           force: bool = False) -> Optional[str]:
         
+        if not self.client:
+            return self._generate_fallback_response(event_type)
+        
         if not force and not self._can_respond(event_type):
             return None
             
@@ -135,8 +144,6 @@ class IrisBrain:
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=150,
-                presence_penalty=0.6,
-                frequency_penalty=0.5
             )
             
             reply = response.choices[0].message.content.strip()
@@ -154,7 +161,19 @@ class IrisBrain:
             
         except Exception as e:
             print(f"[IRIS BRAIN] Ошибка генерации: {e}")
-            return None
+            return self._generate_fallback_response(event_type)
+            
+    def _generate_fallback_response(self, event_type: str) -> Optional[str]:
+        fallbacks = {
+            'kill': ["Красиво!", "Отличный выстрел!", "Так держать!", "Круто!", "Есть!"],
+            'death': ["Бывает...", "Ничего, в следующий раз!", "Отомстим!", "Упс...", "Не расстраивайся!"],
+            'round_end': ["Хороший раунд!", "Продолжаем!", "Дальше будет лучше!", "Неплохо!"],
+            'donation': ["Спасибо за донат!", "Благодарю за поддержку!", "Вау, спасибо!"],
+            'chat': ["Привет!", "Спасибо за сообщение!", "Рада видеть!"],
+        }
+        
+        responses = fallbacks.get(event_type, ["Ок!", "Понятно!", "Хорошо!"])
+        return random.choice(responses)
             
     def react_to_kill(self, kill_data: Dict) -> Optional[str]:
         if not self._can_respond('kill'):
