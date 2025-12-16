@@ -26,14 +26,26 @@ class TTSEngine:
         'angry': 'angry'
     }
     
-    def __init__(self, voice: str = 'ru_female_1', rate: str = '+0%', volume: str = '+0%'):
-        self.voice = self.VOICES.get(voice, 'ru-RU-SvetlanaNeural')
-        self.rate = rate
-        self.volume = volume
-        self.audio_queue = queue.Queue()
-        self.is_speaking = False
-        self._init_pygame()
-        self._start_audio_thread()
+    def __init__(self, voice="ru-RU-DmitryNeural", rate=1.0, pitch=1.0):
+        """Инициализация TTS движка"""
+        self.enabled = True  # Этот атрибут у тебя уже есть
+        
+        try:
+            import pyttsx3
+            self.engine = pyttsx3.init()  # ← ВАЖНО! Создаём движок
+        
+            # Настройки голоса
+            voices = self.engine.getProperty('voices')
+            if voice in [v.id for v in voices]:
+                self.engine.setProperty('voice', voice)
+            self.engine.setProperty('rate', int(rate * 150))
+            self.engine.setProperty('volume', 1.0)
+        
+            print(f"[TTS] Инициализирован с голосом: {voice}")
+        except Exception as e:
+            print(f"[TTS] Ошибка инициализации: {e}")
+            self.enabled = False
+            self.engine = None
         
     def _init_pygame(self):
         try:
@@ -93,7 +105,7 @@ class TTSEngine:
         
     def speak(self, text: str, emotion: str = "neutral"):
         """Озвучивание текста с эмоцией"""
-        if not text or not self.enabled:
+        if not text:
             return
             
         print(f"[TTS] Озвучивание ({emotion}): {text}")

@@ -13,7 +13,7 @@
     "new_subscribers": 0,
     "raids_received": 0,
     "chat_messages": 0,
-    "stream_duration": 0.1333350270324283,
+    "stream_duration": 0.0,
     "kill_streak_max": 0,
     "death_streak_max": 0,
     "current_kill_streak": 0,
@@ -123,5 +123,5 @@
       "progress": 0
     }
   },
-  "session_start": 1765916862.6574526
+  "session_start": 1765919915.075311
 }

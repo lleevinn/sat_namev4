@@ -202,7 +202,7 @@ class IrisAssistant:
         )
         self.random_comment_thread.start()
         
-        self.tts.speak(response)
+        self.tts.speak("Система Ирис успешно запущена и готова к работе!")
         
         print("\n" + "=" * 50)
         print("🌸 Ирис запущена и готова к работе!")
