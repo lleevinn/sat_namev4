@@ -1,164 +1,135 @@
-import os
-import asyncio
-import tempfile
+"""
+Модуль синтеза речи (TTS) для Ирис
+Использует pyttsx3 для офлайн-озвучки
+"""
+
 import threading
 import queue
 import time
-import edge_tts
-import pygame
 
 class TTSEngine:
-    VOICES = {
-        'ru_female_1': 'ru-RU-SvetlanaNeural',
-        'ru_female_2': 'ru-RU-DariyaNeural', 
-        'ru_male_1': 'ru-RU-DmitryNeural',
-        'en_female_1': 'en-US-JennyNeural',
-        'en_female_2': 'en-US-AriaNeural',
-        'en_male_1': 'en-US-GuyNeural',
-    }
-    
-    EMOTIONS = {
-        'neutral': '',
-        'excited': 'cheerful',
-        'sad': 'sad',
-        'sarcastic': 'disgruntled',
-        'supportive': 'friendly',
-        'angry': 'angry'
-    }
-    
-    def __init__(self, voice="ru-RU-DmitryNeural", rate=1.0, pitch=1.0):
-        """Инициализация TTS движка"""
-        self.enabled = True  # Этот атрибут у тебя уже есть
+    def __init__(self, voice=None, rate=200, volume=0.9):
+        """
+        Инициализация TTS движка pyttsx3
+        
+        Args:
+            voice: Голос (если None - системный по умолчанию)
+            rate: Скорость речи (слов в минуту, 150-250 нормально)
+            volume: Громкость (0.0 - 1.0)
+        """
+        self.enabled = True
+        self.engine = None
+        self.queue = queue.Queue()
+        self.is_speaking = False
+        
+        print("[TTS] Инициализация голосового движка...")
         
         try:
             import pyttsx3
-            self.engine = pyttsx3.init()  # ← ВАЖНО! Создаём движок
-        
-            # Настройки голоса
-            voices = self.engine.getProperty('voices')
-            if voice in [v.id for v in voices]:
-                self.engine.setProperty('voice', voice)
-            self.engine.setProperty('rate', int(rate * 150))
-            self.engine.setProperty('volume', 1.0)
-        
-            print(f"[TTS] Инициализирован с голосом: {voice}")
+            
+            # Создаём движок
+            self.engine = pyttsx3.init()
+            
+            # Настройка скорости (упрощённая, без умножения)
+            self.engine.setProperty('rate', int(rate))
+            
+            # Настройка громкости
+            self.engine.setProperty('volume', float(volume))
+            
+            # Настройка голоса, если указан
+            if voice:
+                voices = self.engine.getProperty('voices')
+                for v in voices:
+                    if voice in v.id or voice in v.name:
+                        self.engine.setProperty('voice', v.id)
+                        break
+            
+            print(f"[TTS] Движок инициализирован. Скорость: {rate}, Громкость: {volume}")
+            
         except Exception as e:
-            print(f"[TTS] Ошибка инициализации: {e}")
+            print(f"[TTS] ОШИБКА инициализации: {e}")
+            print("[TTS] Голосовой движок отключён. Ирис будет выводить текст только в консоль.")
             self.enabled = False
             self.engine = None
+    
+    def speak(self, text: str, **kwargs):
+        """
+        Озвучивание текста. **kwargs нужен для игнорирования лишних параметров
+        (например, priority, emotion), которые могут приходить из других модулей.
         
-    def _init_pygame(self):
-        try:
-            pygame.mixer.init(frequency=24000, size=-16, channels=1, buffer=2048)
-        except Exception as e:
-            print(f"[TTS] Ошибка инициализации pygame: {e}")
-        
-    def _start_audio_thread(self):
-        self.audio_thread = threading.Thread(target=self._audio_worker, daemon=True)
-        self.audio_thread.start()
-        
-    def _audio_worker(self):
-        while True:
-            try:
-                audio_path, callback = self.audio_queue.get()
-                if audio_path is None:
-                    break
-                self._play_audio(audio_path)
-                if callback:
-                    callback()
-            except Exception as e:
-                print(f"[TTS] Ошибка воспроизведения: {e}")
-                
-    def _play_audio(self, audio_path: str):
-        self.is_speaking = True
-        try:
-            pygame.mixer.music.load(audio_path)
-            pygame.mixer.music.play()
-            
-            while pygame.mixer.music.get_busy():
-                time.sleep(0.1)
-                
-            try:
-                os.unlink(audio_path)
-            except:
-                pass
-        except Exception as e:
-            print(f"[TTS] Ошибка воспроизведения аудио: {e}")
-        finally:
-            self.is_speaking = False
-            
-    async def _generate_speech_async(self, text: str, emotion: str = 'neutral') -> str:
-        style = self.EMOTIONS.get(emotion, '')
-        
-        communicate = edge_tts.Communicate(
-            text=text,
-            voice=self.voice,
-            rate=self.rate,
-            volume=self.volume
-        )
-        
-        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as f:
-            temp_path = f.name
-            
-        await communicate.save(temp_path)
-        return temp_path
-        
-    def speak(self, text: str, emotion: str = "neutral"):
-        """Озвучивание текста с эмоцией"""
-        if not text:
+        Args:
+            text: Текст для озвучки
+            **kwargs: Дополнительные параметры (игнорируются)
+        """
+        if not text or not self.enabled or not self.engine:
+            # Если движок не работает, просто выводим текст в консоль
+            print(f"[IRIS] >> {text}")
             return
-            
-        print(f"[TTS] Озвучивание ({emotion}): {text}")
+        
+        print(f"[TTS] Озвучивание: {text[:50]}..." if len(text) > 50 else f"[TTS] Озвучивание: {text}")
         
         try:
-            # Реализация озвучки (оставь свою)
-            
-            # Если используешь pyttsx3 - эмоции не поддерживаются напрямую
+            # Озвучиваем текст
             self.engine.say(text)
             self.engine.runAndWait()
             
-            # Или если другой движок - оставляй как есть
-            
         except Exception as e:
-            print(f"[TTS] Ошибка: {e}")
+            print(f"[TTS] Ошибка при озвучивании: {e}")
             print(f"[IRIS] >> {text}")
-            
-    def speak_async(self, text: str, emotion: str = 'neutral'):
-        thread = threading.Thread(target=self.speak, args=(text, emotion))
-        thread.start()
-        return thread
-        
+    
     def stop(self):
-        pygame.mixer.music.stop()
-        while not self.audio_queue.empty():
+        """Остановка TTS движка (корректная обработка для pyttsx3)"""
+        if self.engine:
             try:
-                path, _ = self.audio_queue.get_nowait()
-                if path:
-                    try:
-                        os.unlink(path)
-                    except:
-                        pass
-            except queue.Empty:
-                break
-                
-    def set_voice(self, voice: str):
-        if voice in self.VOICES:
-            self.voice = self.VOICES[voice]
-            return True
+                # Останавливаем текущую речь
+                self.engine.stop()
+            except:
+                pass
+        
+        print("[TTS] Движок остановлен")
+    
+    def set_voice(self, voice_name: str):
+        """Смена голоса"""
+        if not self.engine or not self.enabled:
+            return False
+        
+        try:
+            voices = self.engine.getProperty('voices')
+            for v in voices:
+                if voice_name in v.id or voice_name in v.name:
+                    self.engine.setProperty('voice', v.id)
+                    print(f"[TTS] Голос изменён на: {v.name}")
+                    return True
+        except Exception as e:
+            print(f"[TTS] Ошибка смены голоса: {e}")
+        
         return False
+    
+    def set_rate(self, rate: int):
+        """Установка скорости речи"""
+        if not self.engine or not self.enabled:
+            return
         
-    def set_rate(self, rate: str):
-        self.rate = rate
+        try:
+            self.engine.setProperty('rate', rate)
+            print(f"[TTS] Скорость речи установлена: {rate}")
+        except Exception as e:
+            print(f"[TTS] Ошибка установки скорости: {e}")
+    
+    def set_volume(self, volume: float):
+        """Установка громкости"""
+        if not self.engine or not self.enabled:
+            return
         
-    def get_available_voices(self) -> dict:
-        return self.VOICES.copy()
-        
-    def is_busy(self) -> bool:
-        return self.is_speaking or not self.audio_queue.empty()
-        
+        try:
+            self.engine.setProperty('volume', max(0.0, min(1.0, volume)))
+            print(f"[TTS] Громкость установлена: {volume}")
+        except Exception as e:
+            print(f"[TTS] Ошибка установки громкости: {e}")
 
+# Тестирование при прямом запуске
 if __name__ == "__main__":
-    tts = TTSEngine(voice='ru_female_1')
-    tts.speak("Привет! Я Ирис, твой AI-компаньон для стримов!", emotion='excited')
-    while tts.is_busy():
-        time.sleep(0.1)
+    print("Тестирование TTS движка...")
+    tts = TTSEngine(rate=200, volume=0.8)
+    tts.speak("Привет! Я Ирис, ваш голосовой помощник.")
+    print("Тест завершён успешно!")
