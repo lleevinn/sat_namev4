@@ -91,24 +91,25 @@ class TTSEngine:
         await communicate.save(temp_path)
         return temp_path
         
-    def speak(self, text: str):
+    def speak(self, text: str, emotion: str = "neutral"):
+        """Озвучивание текста с эмоцией"""
         if not text or not self.enabled:
             return
             
-        print(f"[TTS] Озвучивание: {text}")
+        print(f"[TTS] Озвучивание ({emotion}): {text}")
         
         try:
-            # ВСЁ, ЧТО БЫЛО ДО ЭТОГО - ПЕРЕНОСИМ СЮДА ▼
+            # Реализация озвучки (оставь свою)
             
-            # Например, если у тебя pyttsx3:
+            # Если используешь pyttsx3 - эмоции не поддерживаются напрямую
             self.engine.say(text)
             self.engine.runAndWait()
             
             # Или если другой движок - оставляй как есть
             
         except Exception as e:
-            print(f"[TTS] Ошибка при озвучивании: {e}")
-            print(f"[IRIS Fallback] >> {text}")
+            print(f"[TTS] Ошибка: {e}")
+            print(f"[IRIS] >> {text}")
             
     def speak_async(self, text: str, emotion: str = 'neutral'):
         thread = threading.Thread(target=self.speak, args=(text, emotion))

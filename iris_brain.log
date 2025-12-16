@@ -34,3 +34,27 @@
  * Running on http://127.0.0.1:3000
  * Running on http://192.168.31.140:3000
 2025-12-16 23:27:42,672 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 23:42:48,989 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-16 23:42:48,989 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
+2025-12-16 23:42:48,989 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-16 23:42:49,003 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-16 23:42:49,003 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 23:52:54,590 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-16 23:52:54,590 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
+2025-12-16 23:52:54,590 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-16 23:52:54,666 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-16 23:52:54,667 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-17 00:01:33,102 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-17 00:01:33,102 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
+2025-12-17 00:01:33,103 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-17 00:01:33,156 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-17 00:01:33,156 - werkzeug - INFO - [33mPress CTRL+C to quit[0m

@@ -66,7 +66,7 @@ class IrisAssistant:
             
         response = self.brain.chat_with_user(command)
         if response:
-            self.tts.speak(response, emotion='neutral')
+            self.tts.speak(response)
             
     def _on_cs2_event(self, event: GameEvent):
         print(f"[CS2] Событие: {event.event_type}")
@@ -202,10 +202,7 @@ class IrisAssistant:
         )
         self.random_comment_thread.start()
         
-        self.tts.speak(
-            "Привет! Я Ирис, твой AI-компаньон. Готова к стриму!",
-            emotion='excited'
-        )
+        self.tts.speak(response)
         
         print("\n" + "=" * 50)
         print("🌸 Ирис запущена и готова к работе!")
