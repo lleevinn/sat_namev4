@@ -1,0 +1,29 @@
+2025-12-16 22:22:24,587 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-16 22:22:24,588 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-16 22:22:24,609 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-16 22:22:24,609 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 22:24:24,604 - IrisBrain - INFO - Генерация ответа для EventType.RANDOM_COMMENT
+2025-12-16 22:41:59,292 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-16 22:41:59,293 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-16 22:41:59,311 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-16 22:41:59,311 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 22:46:48,718 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-16 22:46:48,718 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-16 22:46:48,739 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-16 22:46:48,739 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-16 23:04:37,125 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-16 23:04:37,126 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-16 23:04:37,144 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-16 23:04:37,145 - werkzeug - INFO - [33mPress CTRL+C to quit[0m

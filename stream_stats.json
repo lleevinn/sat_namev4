@@ -1,0 +1,127 @@
+{
+  "stats": {
+    "total_kills": 0,
+    "total_deaths": 0,
+    "total_assists": 0,
+    "rounds_won": 0,
+    "rounds_lost": 0,
+    "clutches_won": 0,
+    "aces": 0,
+    "headshots": 0,
+    "donations_received": 0,
+    "donations_total": 0.0,
+    "new_subscribers": 0,
+    "raids_received": 0,
+    "chat_messages": 0,
+    "stream_duration": 0.03333655251397027,
+    "kill_streak_max": 0,
+    "death_streak_max": 0,
+    "current_kill_streak": 0,
+    "current_death_streak": 0,
+    "matches_played": 0,
+    "matches_won": 0
+  },
+  "achievements": {
+    "first_blood": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "killing_spree": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "unstoppable": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "ace_master": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "clutch_king": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "headhunter": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "survivor": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "comeback_kid": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "popular": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "loved": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "whale_friend": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "raided": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "marathon": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "consistent": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "team_player": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "economical": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "ninja": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "dedication": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "sub_love": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    },
+    "perfect_round": {
+      "unlocked": false,
+      "unlocked_at": null,
+      "progress": 0
+    }
+  },
+  "session_start": 1765915477.1282175
+}
