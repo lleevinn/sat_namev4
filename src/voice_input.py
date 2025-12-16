@@ -34,7 +34,7 @@ class VoiceInput:
         # Более высокий порог энергии (чувствительность)
         # sensitivity=1.0 -> высокий порог (менее чувствителен)
         # sensitivity=0.0 -> низкий порог (более чувствителен)
-        self.recognizer.energy_threshold = 2000 + (4000 * (1 - sensitivity))
+        self.recognizer.energy_threshold = 1000 + (4000 * (1 - sensitivity))
         
         # Отключаем динамическую регулировку для стабильности
         self.recognizer.dynamic_energy_threshold = False
@@ -74,7 +74,7 @@ class VoiceInput:
                 
                 # Тестовое распознавание
                 print("[VOICE] Скажите что-нибудь для теста...")
-                audio = self.recognizer.listen(source, timeout=2, phrase_time_limit=2)
+                audio = self.recognizer.listen(source, timeout=7)
                 
                 try:
                     text = self.recognizer.recognize_google(audio, language="ru-RU")
@@ -113,9 +113,11 @@ class VoiceInput:
             bool: True если wake word обнаружен
         """
         text_lower = text.lower().strip()
+        wake = self.wake_word.lower()
         
         # 1. Точное совпадение
-        if self.wake_word in text_lower:
+        if wake in text_lower:
+            print(f"[DEBUG] Найдено точное совпадение с '{wake}'")
             return True
             
         # 2. Быстрая речь: wake word и команда могут быть слитно
@@ -129,7 +131,22 @@ class VoiceInput:
             if text_lower[:3] == self.wake_word[:3]:
                 return True
                 
-        # 3. Распространённые ошибки распознавания
+        # 3. Частичное совпадение (первые 3 буквы)
+        if len(text_lower) >= 3 and text_lower[:3] == wake[:3]:
+            print(f"[DEBUG] Найдено частичное совпадение: {text_lower[:3]} == {wake[:3]}")
+            return True
+        
+            # 4. Похожие слова
+        similar = ["ирис", "iris", "ири", "рис", "ириска"]
+        for word in similar:
+            if word in text_lower:
+                print(f"[DEBUG] Найдено похожее слово: {word}")
+                return True
+    
+        print(f"[DEBUG] Wake word не обнаружен")
+        return False
+
+        # 5. Распространённые ошибки распознавания
         common_errors = {
             'ирис': ['рис', 'ири', 'ириса', 'ириска', 'iris', 'ирись'],
             'iris': ['ирис', 'арис', 'ариш', 'ириш']
@@ -140,7 +157,7 @@ class VoiceInput:
                 if error in text_lower:
                     return True
                     
-        # 4. Разделяем текст на слова и проверяем каждое
+        # 6. Разделяем текст на слова и проверяем каждое
         words = text_lower.split()
         for word in words:
             if len(word) >= 3:

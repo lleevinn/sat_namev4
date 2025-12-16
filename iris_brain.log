@@ -133,3 +133,36 @@
 2025-12-17 01:19:36,775 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
 2025-12-17 01:19:36,776 - IrisBrain - INFO - Iris Brain инициализирован успешно
 2025-12-17 01:19:36,796 - VoiceInput - INFO - Инициализация с wake word: 'ирис', чувствительность: 0.8
+2025-12-17 01:23:29,477 - comtypes.client._code_cache - INFO - Imported existing <module 'comtypes.gen' from 'C:\\Users\\Ghost\\Desktop\\hfdhf\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+2025-12-17 01:23:29,477 - comtypes.client._code_cache - INFO - Using writeable comtypes cache directory: 'C:\Users\Ghost\Desktop\hfdhf\venv\Lib\site-packages\comtypes\gen'
+2025-12-17 01:23:29,556 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-17 01:23:29,557 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
+2025-12-17 01:23:29,557 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-17 01:23:29,578 - VoiceInput - INFO - Инициализация с wake word: 'ирис', чувствительность: 0.8
+2025-12-17 01:23:29,589 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-17 01:23:29,590 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-17 01:34:22,362 - comtypes.client._code_cache - INFO - Imported existing <module 'comtypes.gen' from 'C:\\Users\\Ghost\\Desktop\\hfdhf\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+2025-12-17 01:34:22,362 - comtypes.client._code_cache - INFO - Using writeable comtypes cache directory: 'C:\Users\Ghost\Desktop\hfdhf\venv\Lib\site-packages\comtypes\gen'
+2025-12-17 01:34:22,441 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-17 01:34:22,442 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
+2025-12-17 01:34:22,442 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-17 01:34:22,463 - VoiceInput - INFO - Инициализация с wake word: 'ирис', чувствительность: 0.8
+2025-12-17 01:34:22,474 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-17 01:34:22,474 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-17 01:46:55,125 - comtypes.client._code_cache - INFO - Imported existing <module 'comtypes.gen' from 'C:\\Users\\Ghost\\Desktop\\hfdhf\\venv\\Lib\\site-packages\\comtypes\\gen\\__init__.py'>
+2025-12-17 01:46:55,126 - comtypes.client._code_cache - INFO - Using writeable comtypes cache directory: 'C:\Users\Ghost\Desktop\hfdhf\venv\Lib\site-packages\comtypes\gen'
+2025-12-17 01:46:55,204 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-17 01:46:55,204 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
+2025-12-17 01:46:55,204 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-17 01:46:55,225 - VoiceInput - INFO - Инициализация с wake word: 'ирис', чувствительность: 0.8
+2025-12-17 01:46:55,234 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-17 01:46:55,236 - werkzeug - INFO - [33mPress CTRL+C to quit[0m

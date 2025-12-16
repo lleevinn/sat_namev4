@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from src.utils.tts_utils import synthesize_and_play
 from src.tts_engine import TTSEngine
 from src.voice_input import VoiceInput  # Импорт правильного класса
 from src.cs2_gsi import CS2GameStateIntegration, GameEvent  # Этот класс мы импортируем
