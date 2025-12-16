@@ -8,89 +8,61 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.tts_engine import TTSEngine
-from src.voice_recognition import VoiceRecognition, TextInputFallback, PYAUDIO_AVAILABLE
-from src.cs2_gsi import CS2GameStateIntegration, GameEvent
+from src.voice_recognition import VoiceRecognition  # Импорт правильного класса
+from src.cs2_gsi import CS2GameStateIntegration, GameEvent  # Этот класс мы импортируем
 from src.streamelements_client import StreamElementsClient, StreamEvent
 from src.iris_brain import IrisBrain
 from src.windows_audio import WindowsAudioController
 from src.achievements import AchievementSystem, Achievement
+# Импортируем дополнительные компоненты, если они есть
+try:
+    from src.audio_mixer import AudioMixer
+    from src.voice_input import VoiceInput  # На случай, если старый модуль ещё нужен
+except ImportError:
+    pass
 
-class IrisAssistant: 
+class IrisAssistant:
     def __init__(self):
         print("=" * 50)
         print("🌸 Запуск Ирис - AI Stream Companion")
         print("=" * 50)
-        
+
         self.CONFIG = {
             "cs2_gsi_port": 3000,
-            "voice_wake_word": "ирис",
+            "voice_wake_word": "ирис",  # Исправлено: нормальные русские буквы
             "voice_sensitivity": 0.8,
-            "tts_voice": "female",  # Просто "female" - движок сам выберет женский
-            "tts_rate": 200,        # Скорость (150-250 нормально)
-            "tts_volume": 0.9,      # Громкость
+            "tts_voice": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices\\Tokens\\TTS_MS_RU-RU_IRINA_11.0",  # Прямой ID голоса Ирины
+            "tts_rate": 200,
+            "tts_volume": 0.9,
         }
-        
+
+        # Инициализация компонентов в правильном порядке
         self.tts = TTSEngine(
-            voice=self.CONFIG.get("tts_voice", "female"),
-            rate=self.CONFIG.get("tts_rate", 200),
-            volume=self.CONFIG.get("tts_volume", 0.9)
+            voice=self.CONFIG["tts_voice"],
+            rate=self.CONFIG["tts_rate"],
+            volume=self.CONFIG["tts_volume"]
+        )
+
+        self.iris_brain = IrisBrain()
+        
+        # ИСПРАВЛЕНО: используем импортированный класс CS2GameStateIntegration
+        self.cs2_gsi = CS2GameStateIntegration(port=self.CONFIG["cs2_gsi_port"])
+        
+        self.audio_controller = WindowsAudioController()
+        
+        # Используем VoiceRecognition, так как он импортируется
+        self.voice_input = VoiceRecognition(
+            wake_word=self.CONFIG["voice_wake_word"],
+            sensitivity=self.CONFIG["voice_sensitivity"]
         )
         
-        self.brain = IrisBrain(model='llama-3.3-70b-versatile', temperature=0.9)
-        self.audio_controller = WindowsAudioController()
-        self.achievements = AchievementSystem(achievement_callback=self._on_achievement)
+        self.achievements = AchievementSystem()
+        self.stream_elements = StreamElementsClient()
+        
         # Настройка обработки голосовых команд
         self.voice_input.set_command_callback(self.process_voice_command)
         
-        self.cs2_gsi = CS2GameStateIntegration(
-            port=3000,
-            event_callback=self._on_cs2_event
-        )
-        
-        jwt_token = os.getenv('STREAMELEMENTS_JWT_TOKEN', '')
-        self.stream_elements = StreamElementsClient(
-            jwt_token=jwt_token,
-            event_callback=self._on_stream_event
-        )
-        
-        if PYAUDIO_AVAILABLE:
-            self.voice = VoiceRecognition(
-                wake_word_callback=self._on_wake_word,
-                command_callback=self._on_voice_command
-            )
-        else:
-            self.voice = TextInputFallback(command_callback=self._on_voice_command)
-            
-        self.is_running = False
-        self.random_comment_thread = None
-        
-
-    def process_voice_command(self, command: str):
-        """Обработка голосовых команд (упрощенная версия)"""
-        print(f"[IRIS] 💬 Команда: '{command}'")
-        
-        if not command or command.strip() == "":
-            response = "Да, я здесь! Говорите команду."
-        elif "привет" in command.lower():
-            response = "Привет! Как настроение на стриме?"
-        elif "как дела" in command.lower():
-            response = "Всё отлично, готовлюсь комментировать вашу игру!"
-        elif "шутка" in command.lower():
-            response = "Почему программист всегда мокрый? Потому что он постоянно в бассейне кода!"
-        elif "стоп" in command.lower() or "выход" in command.lower():
-            response = "Завершаю работу. До новых стримов!"
-            self.tts.speak(response)
-            self.stop()
-            return
-        else:
-            # Используем IrisBrain для генерации ответа
-            response = self.iris_brain.chat_with_user(command)
-            if not response:
-                response = f"Я услышала: '{command}'. Нужно немного времени, чтобы научиться отвечать на это!"
-        
-        # Озвучиваем ответ
-        print(f"[IRIS] 🤖 Ответ: {response}")
-        self.tts.speak(response)    
+           
     def _on_wake_word(self):
         print("[IRIS] Wake word обнаружен!")
         self.tts.speak("Да?", emotion='neutral', priority=True)
@@ -273,6 +245,30 @@ class IrisAssistant:
         
         print("[IRIS] До встречи на следующем стриме! 🌸")
         
+    def process_voice_command(self, command: str):
+        """Обработка голосовых команд"""
+        print(f"[IRIS] 💬 Команда: '{command}'")
+        
+        if not command or command.strip() == "":
+            response = "Да, я здесь! Говорите команду."
+        elif "привет" in command.lower():
+            response = "Привет! Я Ирис, теперь с женским голосом!"
+        elif "тест" in command.lower():
+            response = "Тест пройден. Голосовой помощник работает."
+        elif "стоп" in command.lower():
+            response = "Завершаю работу."
+            self.tts.speak(response)
+            self.stop()
+            return
+        else:
+            # Используем мозг Ирис для ответа
+            response = self.iris_brain.chat_with_user(command)
+            if not response:
+                response = f"Я услышала: '{command}'."
+        
+        print(f"[IRIS] 🤖 Ответ: {response}")
+        self.tts.speak(response)
+
     def run(self):
         def signal_handler(sig, frame):
             self.stop()
