@@ -222,6 +222,12 @@ class IrisBrain:
         
         # Счётчики разнообразия реакций
         self.response_variety: Dict[str, int] = defaultdict(int)
+
+        # Временное исправление: принудительно включаем fallback-режим
+        self.client = None
+        self.fallback_mode = True
+        
+        logger.warning("Groq временно отключен. Используется режим заглушек.")
         
         # Статистика использования
         self.stats: Dict[str, Any] = {

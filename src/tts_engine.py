@@ -91,23 +91,24 @@ class TTSEngine:
         await communicate.save(temp_path)
         return temp_path
         
-    def speak(self, text: str, emotion: str = 'neutral', callback=None, priority: bool = False):
-        if not text or not text.strip():
+    def speak(self, text: str):
+        if not text or not self.enabled:
             return
             
+        print(f"[TTS] Озвучивание: {text}")
+        
         try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            audio_path = loop.run_until_complete(self._generate_speech_async(text, emotion))
-            loop.close()
+            # ВСЁ, ЧТО БЫЛО ДО ЭТОГО - ПЕРЕНОСИМ СЮДА ▼
             
-            if priority:
-                self.stop()
-                
-            self.audio_queue.put((audio_path, callback))
+            # Например, если у тебя pyttsx3:
+            self.engine.say(text)
+            self.engine.runAndWait()
+            
+            # Или если другой движок - оставляй как есть
             
         except Exception as e:
-            print(f"[TTS] Ошибка генерации речи: {e}")
+            print(f"[TTS] Ошибка при озвучивании: {e}")
+            print(f"[IRIS Fallback] >> {text}")
             
     def speak_async(self, text: str, emotion: str = 'neutral'):
         thread = threading.Thread(target=self.speak, args=(text, emotion))
