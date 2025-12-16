@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.tts_engine import TTSEngine
-from src.voice_recognition import VoiceRecognition  # Импорт правильного класса
+from src.voice_input import VoiceInput  # Импорт правильного класса
 from src.cs2_gsi import CS2GameStateIntegration, GameEvent  # Этот класс мы импортируем
 from src.streamelements_client import StreamElementsClient, StreamEvent
 from src.iris_brain import IrisBrain
@@ -51,7 +51,7 @@ class IrisAssistant:
         self.audio_controller = WindowsAudioController()
         
         # Используем VoiceRecognition, так как он импортируется
-        self.voice_input = VoiceRecognition(
+        self.voice_input = VoiceInput(
             wake_word=self.CONFIG["voice_wake_word"],
             sensitivity=self.CONFIG["voice_sensitivity"]
         )
@@ -209,7 +209,7 @@ class IrisAssistant:
             print("\n[IRIS] ⚠️ GROQ_API_KEY не настроен - AI будет использовать fallback ответы")
             
         print("\n[IRIS] Запуск голосового ввода...")
-        self.voice.start_listening()
+        self.voice_input.start()
         
         self.random_comment_thread = threading.Thread(
             target=self._random_comment_loop, 

@@ -211,10 +211,9 @@ class VoiceInput:
                     
                     print(f"[VOICE] Распознано: {text}")
                     
-                    # Проверка на наличие wake word
-                        if command:
-                            print(f"[IRIS] Команда: {command}")
-                        
+                    # ВАЖНО: ПРОВЕРКА WAKE WORD ДОЛЖНА БЫТЬ ЗДЕСЬ!
+                    if self._check_wake_word(text):
+                        print(f"[IRIS] Wake word обнаружен!")
                         
                         # Извлечение команды
                         command = self._extract_command(text)
@@ -222,18 +221,14 @@ class VoiceInput:
                             print(f"[IRIS] Команда: {command}")
                         else:
                             print(f"[IRIS] Просто активация (команда пустая)")
-                            command = "привет"  # Дефолтная команда при просто "ирис"
-                            
+                            command = ""  # Пустая команда - просто активация
+                        
                         # Добавление команды в очередь
                         self.command_queue.put(command)
                             
                         # Вызов callback, если задан
                         if self.command_callback:
                             self.command_callback(command)
-                        else:
-                            # Если команда пустая, всё равно добавляем в очередь
-                            # для обработки простой активации
-                            self.command_queue.put("")
                                 
                     # Обработка специальных команд
                     elif text.lower() in ["стоп", "остановись", "выход", "stop", "exit"]:
@@ -247,10 +242,10 @@ class VoiceInput:
                     # Речь не распознана
                     continue
                 except sr.RequestError as e:
-                    logger.error(f"Ошибка сервиса распознавания: {e}")
+                    print(f"[VOICE] Ошибка сервиса распознавания: {e}")
                     time.sleep(1)
                 except Exception as e:
-                    logger.error(f"Неожиданная ошибка: {e}")
+                    print(f"[VOICE] Неожиданная ошибка: {e}")
                     time.sleep(0.1)
                     
     def start(self):
