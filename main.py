@@ -270,17 +270,58 @@ class IrisAssistant:
                 if comment:
                     self.tts.speak(comment, emotion='neutral')
                     
+    def _run_startup_sequence(self):
+        """Последовательность запуска в стиле Iron Man"""
+        import random
+        
+        startup_phrases = [
+            ("Инициализация системы... Проверяю ядро.", 'scan', 1.5),
+            ("Загрузка нейронных модулей... Всё в норме.", 'loading', 1.8),
+            ("Сканирование аудио устройств...", 'scan', 1.2),
+            ("Подключение к игровым серверам...", 'connect', 1.5),
+            ("Калибровка голосового модуля... Тестирую.", 'check', 1.3),
+            ("Проверка соединений завершена.", 'confirm', 1.0),
+        ]
+        
+        greeting_variants = [
+            "Все системы активны! Привет, я Ирис. Готова зажигать на стриме!",
+            "Инициализация завершена! Ирис на связи. Давай устроим шоу!",
+            "Протоколы загружены! Я Ирис, твоя AI-напарница. Поехали!",
+            "Системы в норме! Привет! Я готова комментировать твои эпичные моменты!",
+            "Ядро стабильно! Ирис активирована. Сегодня будет жарко!",
+        ]
+        
+        time.sleep(2.5)
+        
+        for phrase, phase, duration in startup_phrases:
+            self.visual.animate_phase(phase, duration)
+            self.tts.speak(phrase, emotion='neutral')
+            
+            while self.tts.is_busy():
+                time.sleep(0.1)
+            
+            time.sleep(0.3)
+        
+        self.visual.play_sound('ready', 0.8)
+        time.sleep(0.3)
+        
+        greeting = random.choice(greeting_variants)
+        self.tts.speak(greeting, emotion='excited')
+        
+        print("[IRIS] ✨ Последовательность запуска завершена!")
+    
     def start(self):
         """Запуск Ирис"""
         self.is_running = True
         
         print("\n[IRIS] 🚀 Запуск визуального интерфейса (Iron Man startup)...")
         
-        def on_startup_complete():
-            print("[IRIS] ✨ Анимация запуска завершена!")
-            self.tts.speak("Привет! Я Ирис, готова к стриму!", emotion='happy')
+        def on_power_up_complete():
+            print("[IRIS] ⚡ Power-up завершён, запуск диагностики...")
+            startup_thread = threading.Thread(target=self._run_startup_sequence, daemon=True)
+            startup_thread.start()
         
-        self.visual_thread = self.visual.run_async(on_startup_complete)
+        self.visual_thread = self.visual.run_async(on_power_up_complete)
         
         time.sleep(0.5)
         

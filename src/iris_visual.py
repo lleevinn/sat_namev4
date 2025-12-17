@@ -220,42 +220,88 @@ class IrisVisual:
             time.sleep(1/60)
         self.speech_intensity = 0
     
-    def generate_startup_sound(self) -> Optional[str]:
-        """Генерация звука запуска в стиле Iron Man"""
+    def generate_startup_sound(self, sound_type: str = 'power_up') -> Optional[str]:
+        """Генерация звуков запуска в стиле Iron Man"""
         try:
             sample_rate = 44100
-            duration = 2.5
-            t = np.linspace(0, duration, int(sample_rate * duration))
             
-            power_up = np.sin(2 * np.pi * 80 * t) * np.exp(-t * 0.3)
-            power_up += np.sin(2 * np.pi * 160 * t) * np.exp(-t * 0.5) * 0.5
-            
-            sweep_freq = 100 + 400 * (t / duration)
-            sweep = np.sin(2 * np.pi * sweep_freq * t) * 0.3
-            sweep *= np.exp(-np.abs(t - 1.0) * 2)
-            
-            harmonics = np.sin(2 * np.pi * 440 * t) * 0.2
-            harmonics += np.sin(2 * np.pi * 880 * t) * 0.1
-            harmonics += np.sin(2 * np.pi * 1320 * t) * 0.05
-            harmonics *= np.exp(-t * 0.8)
-            
-            hum = np.sin(2 * np.pi * 60 * t) * 0.1 * (1 - np.exp(-t * 2))
-            
-            sound = power_up + sweep + harmonics + hum
+            if sound_type == 'power_up':
+                duration = 2.0
+                t = np.linspace(0, duration, int(sample_rate * duration))
+                power_up = np.sin(2 * np.pi * 80 * t) * np.exp(-t * 0.3)
+                power_up += np.sin(2 * np.pi * 160 * t) * np.exp(-t * 0.5) * 0.5
+                sweep_freq = 100 + 400 * (t / duration)
+                sweep = np.sin(2 * np.pi * sweep_freq * t) * 0.3
+                sweep *= np.exp(-np.abs(t - 1.0) * 2)
+                harmonics = np.sin(2 * np.pi * 440 * t) * 0.2
+                harmonics += np.sin(2 * np.pi * 880 * t) * 0.1
+                harmonics *= np.exp(-t * 0.8)
+                hum = np.sin(2 * np.pi * 60 * t) * 0.1 * (1 - np.exp(-t * 2))
+                sound = power_up + sweep + harmonics + hum
+                
+            elif sound_type == 'scan':
+                duration = 1.0
+                t = np.linspace(0, duration, int(sample_rate * duration))
+                sweep_freq = 200 + 1000 * np.sin(t / duration * np.pi)
+                sound = np.sin(2 * np.pi * sweep_freq * t) * 0.4
+                sound += np.sin(2 * np.pi * 880 * t) * 0.1 * np.sin(t * 30)
+                sound *= (1 - np.exp(-t * 10)) * np.exp(-(t - duration) * 3)
+                
+            elif sound_type == 'confirm':
+                duration = 0.5
+                t = np.linspace(0, duration, int(sample_rate * duration))
+                sound = np.sin(2 * np.pi * 880 * t) * 0.3
+                sound += np.sin(2 * np.pi * 1320 * t) * 0.2
+                sound *= np.exp(-t * 4)
+                
+            elif sound_type == 'loading':
+                duration = 1.5
+                t = np.linspace(0, duration, int(sample_rate * duration))
+                base_freq = 150 + 100 * (t / duration)
+                sound = np.sin(2 * np.pi * base_freq * t) * 0.3
+                pulse = (np.sin(t * 15) > 0).astype(float) * 0.3
+                sound += pulse * np.sin(2 * np.pi * 600 * t) * 0.2
+                hum = np.sin(2 * np.pi * 60 * t) * 0.15
+                sound += hum
+                
+            elif sound_type == 'connect':
+                duration = 0.8
+                t = np.linspace(0, duration, int(sample_rate * duration))
+                beep1 = np.sin(2 * np.pi * 1000 * t) * (t < 0.15).astype(float)
+                beep2 = np.sin(2 * np.pi * 1200 * t) * ((t > 0.2) & (t < 0.35)).astype(float)
+                beep3 = np.sin(2 * np.pi * 1500 * t) * ((t > 0.4) & (t < 0.55)).astype(float)
+                sound = (beep1 + beep2 + beep3) * 0.4
+                sound *= np.exp(-np.abs(t - 0.4) * 2)
+                
+            elif sound_type == 'ready':
+                duration = 1.2
+                t = np.linspace(0, duration, int(sample_rate * duration))
+                chord = np.sin(2 * np.pi * 523 * t) * 0.3
+                chord += np.sin(2 * np.pi * 659 * t) * 0.25
+                chord += np.sin(2 * np.pi * 784 * t) * 0.2
+                chord += np.sin(2 * np.pi * 1047 * t) * 0.15
+                sound = chord * (1 - np.exp(-t * 5)) * np.exp(-(t - 0.3) * 1.5)
+                shimmer = np.sin(2 * np.pi * 2000 * t) * 0.05 * np.sin(t * 20)
+                sound += shimmer
+            else:
+                return None
             
             envelope = np.ones_like(t)
-            attack = int(0.1 * sample_rate)
-            release = int(0.3 * sample_rate)
-            envelope[:attack] = np.linspace(0, 1, attack)
-            envelope[-release:] = np.linspace(1, 0, release)
+            attack = int(0.05 * sample_rate)
+            release = int(0.1 * sample_rate)
+            if len(envelope) > attack:
+                envelope[:attack] = np.linspace(0, 1, attack)
+            if len(envelope) > release:
+                envelope[-release:] = np.linspace(1, 0, release)
             sound *= envelope
             
-            sound = sound / np.max(np.abs(sound)) * 0.8
+            if np.max(np.abs(sound)) > 0:
+                sound = sound / np.max(np.abs(sound)) * 0.7
             
             sound_int = np.int16(sound * 32767)
             
             import tempfile
-            temp_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=False, prefix='iris_startup_')
+            temp_file = tempfile.NamedTemporaryFile(suffix='.wav', delete=False, prefix=f'iris_{sound_type}_')
             
             import wave
             with wave.open(temp_file.name, 'w') as wav_file:
@@ -264,48 +310,66 @@ class IrisVisual:
                 wav_file.setframerate(sample_rate)
                 wav_file.writeframes(sound_int.tobytes())
             
-            self.startup_sound_path = temp_file.name
             return temp_file.name
             
         except Exception as e:
-            print(f"[VISUAL] Ошибка генерации звука запуска: {e}")
+            print(f"[VISUAL] Ошибка генерации звука {sound_type}: {e}")
             return None
     
-    def play_startup_sequence(self, callback: Optional[Callable] = None):
-        """Воспроизвести анимацию и звук запуска"""
+    def play_sound(self, sound_type: str, volume: float = 0.7):
+        """Воспроизвести звуковой эффект"""
+        sound_path = self.generate_startup_sound(sound_type)
+        if sound_path and pygame.mixer.get_init():
+            try:
+                sound = pygame.mixer.Sound(sound_path)
+                sound.set_volume(volume)
+                sound.play()
+                return sound_path
+            except Exception as e:
+                print(f"[VISUAL] Ошибка воспроизведения {sound_type}: {e}")
+        return None
+    
+    def play_startup_sequence(self, callback: Optional[Callable] = None, phase_callback: Optional[Callable] = None):
+        """Воспроизвести полную анимацию запуска с фазами"""
         def startup_thread():
-            sound_path = self.generate_startup_sound()
+            temp_files = []
             
-            if sound_path and pygame.mixer.get_init():
-                try:
-                    startup_sound = pygame.mixer.Sound(sound_path)
-                    startup_sound.set_volume(0.7)
-                    startup_sound.play()
-                except Exception as e:
-                    print(f"[VISUAL] Ошибка воспроизведения звука запуска: {e}")
+            sound_path = self.generate_startup_sound('power_up')
+            if sound_path:
+                temp_files.append(sound_path)
+                if pygame.mixer.get_init():
+                    try:
+                        startup_sound = pygame.mixer.Sound(sound_path)
+                        startup_sound.set_volume(0.7)
+                        startup_sound.play()
+                    except:
+                        pass
             
             start_time = time.time()
-            duration = 2.5
+            duration = 2.0
             
             while time.time() - start_time < duration:
                 progress = (time.time() - start_time) / duration
                 self.startup_animation_progress = progress
-                
                 if progress < 0.3:
-                    self.speech_intensity = progress / 0.3 * 0.5
+                    self.speech_intensity = progress / 0.3 * 0.6
                 elif progress < 0.7:
-                    self.speech_intensity = 0.5 + math.sin((progress - 0.3) / 0.4 * math.pi * 4) * 0.3
+                    self.speech_intensity = 0.6 + math.sin((progress - 0.3) / 0.4 * math.pi * 4) * 0.3
                 else:
-                    self.speech_intensity = max(0, (1 - progress) / 0.3 * 0.8)
-                
+                    self.speech_intensity = max(0.2, (1 - progress) / 0.3 * 0.6)
                 time.sleep(0.016)
+            
+            if phase_callback:
+                phase_callback('power_up_complete')
+            
+            time.sleep(0.5)
             
             self.startup_complete = True
             self.speech_intensity = 0
             
-            if sound_path:
+            for f in temp_files:
                 try:
-                    os.unlink(sound_path)
+                    os.unlink(f)
                 except:
                     pass
             
@@ -313,6 +377,39 @@ class IrisVisual:
                 callback()
         
         threading.Thread(target=startup_thread, daemon=True).start()
+    
+    def animate_phase(self, phase_name: str, duration: float = 1.0):
+        """Анимировать определённую фазу запуска"""
+        def phase_thread():
+            sound_map = {
+                'scan': 'scan',
+                'check': 'scan', 
+                'connect': 'connect',
+                'loading': 'loading',
+                'confirm': 'confirm',
+                'ready': 'ready'
+            }
+            
+            sound_type = sound_map.get(phase_name, 'confirm')
+            sound_path = self.play_sound(sound_type, 0.5)
+            
+            start_time = time.time()
+            while time.time() - start_time < duration:
+                progress = (time.time() - start_time) / duration
+                wave = math.sin(progress * math.pi * 6) * 0.3
+                self.speech_intensity = 0.4 + wave
+                time.sleep(0.016)
+            
+            self.speech_intensity = 0.2
+            
+            if sound_path:
+                try:
+                    time.sleep(0.3)
+                    os.unlink(sound_path)
+                except:
+                    pass
+        
+        threading.Thread(target=phase_thread, daemon=True).start()
     
     def run(self, startup_callback: Optional[Callable] = None):
         """Запустить визуальный интерфейс"""
