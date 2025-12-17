@@ -33,4 +33,4 @@ pyttsx3==2.90
 openai==1.12.0
 numpy==1.26.4
 python-dotenv==1.0.0
->>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa
+

@@ -43,9 +43,11 @@ class StreamElementsClient:
         self.heartbeat_thread = None
         
     def connect(self):
-        if not self.jwt_token:
-            print("[StreamElements] JWT токен не настроен!")
-            return False
+        try:
+            print("[StreamElements] Подключение...")
+        if not self.jwt_token or self.jwt_token == "your_jwt_token_here":
+            print("[StreamElements] ⚠️ JWT токен не настроен, пропускаем подключение")
+        return
             
         self.ws = websocket.WebSocketApp(
             self.WS_URL,

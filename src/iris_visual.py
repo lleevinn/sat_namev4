@@ -49,6 +49,14 @@ class IrisVisual:
         self.screen = None
         self.clock = None
         
+    def set_status(self, text: str):
+        """Установка статусного текста"""
+        if hasattr(self, 'status_label'):
+            self.status_label.config(text=text)
+        elif hasattr(self, 'status_text'):
+            self.status_text = text
+        print(f"[VISUAL] Статус: {text}")
+
     def _init_pygame(self):
         """Инициализация pygame display"""
         if self.initialized:

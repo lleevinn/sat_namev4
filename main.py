@@ -63,15 +63,15 @@ class IrisAssistant:
         self.CONFIG = {
             "cs2_gsi_port": 3000,
             "voice_wake_word": "ирис",
-            "voice_sensitivity": 0.7,
+            "voice_sensitivity": 0.4,
             "tts_voice": "ru_female_soft",
             "tts_rate": 0,
-            "tts_volume": 0.9,
-            "visual_enabled": True,
+            "tts_volume": 1.0,
+            "visual_enabled": False,
             "random_comments_interval": 120,  # секунды
             "achievements_enabled": True,
             "cs2_integration": True,
-            "streamelements_enabled": True,
+            "streamelements_enabled": False,
             "voice_mode": "vosk",  # auto, vosk, google, hybrid, simple
         }
         
