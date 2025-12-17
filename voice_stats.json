@@ -1,0 +1,180 @@
+{
+  "timestamp": 1766002599.6928594,
+  "stats": {
+    "total_phrases": 98,
+    "wake_detected": 11,
+    "vosk_success": 6,
+    "google_success": 0,
+    "avg_confidence": 0.6183673469387762,
+    "last_recognition": "",
+    "audio_quality": 0.9989007393519084
+  },
+  "settings": {
+    "wake_word": "ирис",
+    "sensitivity": 0.7,
+    "mode": "vosk",
+    "sample_rate": 16000
+  },
+  "recent_history": [
+    {
+      "text": "ирис",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002483.708996,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "ирис",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002483.7925014,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "ирис",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002483.8923671,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "ирис",
+      "confidence": 0.9,
+      "source": "vosk",
+      "timestamp": 1766002484.0230796,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002488.5151045,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002488.5922022,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002488.6918752,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002488.81629,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002488.8923137,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.0115001,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.0921645,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.1925895,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.3132646,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.3929892,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не слышу",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.5131612,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не слышу",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.5923893,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не слышу",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.7123082,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не слышу",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.7923653,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не слышу",
+      "confidence": 0.6,
+      "source": "vosk_partial",
+      "timestamp": 1766002489.8924499,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    },
+    {
+      "text": "почему я тебя не слышу",
+      "confidence": 0.9,
+      "source": "vosk",
+      "timestamp": 1766002490.0891597,
+      "mode": "vosk",
+      "sensitivity": 0.7
+    }
+  ]
+}

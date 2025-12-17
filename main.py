@@ -18,7 +18,7 @@ load_dotenv()
 
 # Импорт основных модулей системы
 from src.tts_engine import TTSEngine
-from src.voice_input import VoiceInput
+from src.voice_input import create_voice_input  # ИСПРАВЛЕНО: используем фабрику
 from src.cs2_gsi import CS2GameStateIntegration, GameEvent
 from src.streamelements_client import StreamElementsClient, StreamEvent
 from src.iris_brain import IrisBrain
@@ -29,9 +29,11 @@ from src.achievements import AchievementSystem, Achievement
 try:
     from src.iris_visual import IrisVisual
     VISUAL_AVAILABLE = True
+    print("[IRIS] ✅ Визуальный модуль доступен")
 except ImportError:
     VISUAL_AVAILABLE = False
-    print("[IRIS] Визуальный модуль не найден, работаем без интерфейса")
+    print("[IRIS] ⚠️ Визуальный модуль не найден, работаем без интерфейса")
+
 
 class IrisAssistant:
     """
@@ -54,11 +56,14 @@ class IrisAssistant:
         print("=" * 60)
         print()
         
+        # Сохраняем доступность визуального модуля в классе
+        self.VISUAL_AVAILABLE = VISUAL_AVAILABLE
+        
         # Конфигурация системы (можно вынести в отдельный файл)
         self.CONFIG = {
             "cs2_gsi_port": 3000,
             "voice_wake_word": "ирис",
-            "voice_sensitivity": 0.8,
+            "voice_sensitivity": 0.7,
             "tts_voice": "ru_female_soft",
             "tts_rate": 0,
             "tts_volume": 0.9,
@@ -67,6 +72,7 @@ class IrisAssistant:
             "achievements_enabled": True,
             "cs2_integration": True,
             "streamelements_enabled": True,
+            "voice_mode": "vosk",  # auto, vosk, google, hybrid, simple
         }
         
         # Флаг работы системы
@@ -85,23 +91,26 @@ class IrisAssistant:
         print()
         print("[IRIS] ✅ Все компоненты успешно инициализированы")
         print("[IRIS] 📊 Статус системы:")
-        print(f"       • Визуализация: {'ВКЛ' if VISUAL_AVAILABLE and self.CONFIG['visual_enabled'] else 'ВЫКЛ'}")
-        print(f"       • CS2 интеграция: {'ВКЛ' if self.CONFIG['cs2_integration'] else 'ВЫКЛ'}")
-        print(f"       • StreamElements: {'ВКЛ' if self.CONFIG['streamelements_enabled'] else 'ВЫКЛ'}")
-        print(f"       • Достижения: {'ВКЛ' if self.CONFIG['achievements_enabled'] else 'ВЫКЛ'}")
+        print(f"       • Визуализация: {'✅ ВКЛ' if self.VISUAL_AVAILABLE and self.CONFIG['visual_enabled'] else '❌ ВЫКЛ'}")
+        print(f"       • CS2 интеграция: {'✅ ВКЛ' if self.CONFIG['cs2_integration'] else '❌ ВЫКЛ'}")
+        print(f"       • StreamElements: {'✅ ВКЛ' if self.CONFIG['streamelements_enabled'] else '❌ ВЫКЛ'}")
+        print(f"       • Достижения: {'✅ ВКЛ' if self.CONFIG['achievements_enabled'] else '❌ ВЫКЛ'}")
+        print(f"       • Режим голоса: {self.CONFIG['voice_mode']}")
     
     def _initialize_visual(self):
         """Инициализация визуального интерфейса (IO-style)"""
-        if VISUAL_AVAILABLE and self.CONFIG['visual_enabled']:
+        if self.VISUAL_AVAILABLE and self.CONFIG['visual_enabled']:
             print("[IRIS] Инициализация визуального интерфейса (IO-style)...")
             try:
                 self.visual = IrisVisual(width=400, height=400)
                 self.visual.set_status("Инициализация...")
+                print("[IRIS] ✅ Визуальный интерфейс готов")
             except Exception as e:
-                print(f"[IRIS] Ошибка инициализации визуального интерфейса: {e}")
-                VISUAL_AVAILABLE = False
+                print(f"[IRIS] ❌ Ошибка инициализации визуального интерфейса: {e}")
+                self.VISUAL_AVAILABLE = False
+                self.visual = None
         else:
-            print("[IRIS] Визуальный интерфейс отключен в конфигурации")
+            print("[IRIS] ⚠️ Визуальный интерфейс отключен")
             self.visual = None
     
     def _initialize_tts(self):
@@ -112,22 +121,31 @@ class IrisAssistant:
                 voice=self.CONFIG["tts_voice"],
                 rate=self.CONFIG["tts_rate"],
                 volume=self.CONFIG["tts_volume"],
-                visual_callback=self._on_visual_update if VISUAL_AVAILABLE else None
+                visual_callback=self._on_visual_update if self.VISUAL_AVAILABLE else None
             )
+            print("[IRIS] ✅ TTS система готова")
         except Exception as e:
-            print(f"[IRIS] Критическая ошибка TTS: {e}")
-            print("[IRIS] Продолжаем без голосового вывода...")
+            print(f"[IRIS] ❌ Критическая ошибка TTS: {e}")
+            print("[IRIS] ⚠️ Продолжаем без голосового вывода...")
             self.tts = None
     
     def _initialize_ai_brain(self):
         """Инициализация AI-мозга системы"""
         print("[IRIS] Инициализация AI мозга...")
-        self.iris_brain = IrisBrain()
-        
-        # Проверка доступности AI-сервисов
-        groq_key = os.getenv('GROQ_API_KEY', '')
-        if not groq_key:
-            print("[IRIS] ⚠️ GROQ_API_KEY не настроен - AI будет использовать fallback ответы")
+        try:
+            self.iris_brain = IrisBrain()
+            print("[IRIS] ✅ AI мозг инициализирован")
+            
+            # Проверка доступности AI-сервисов
+            groq_key = os.getenv('GROQ_API_KEY', '')
+            if groq_key:
+                print("[IRIS] ✅ Groq API ключ найден")
+            else:
+                print("[IRIS] ⚠️ GROQ_API_KEY не настроен - AI будет использовать fallback ответы")
+                
+        except Exception as e:
+            print(f"[IRIS] ❌ Ошибка инициализации AI: {e}")
+            self.iris_brain = None
     
     def _initialize_game_integration(self):
         """Инициализация интеграции с CS2"""
@@ -138,8 +156,9 @@ class IrisAssistant:
                     port=self.CONFIG["cs2_gsi_port"],
                     event_callback=self._on_cs2_event
                 )
+                print(f"[IRIS] ✅ CS2 GSI готов (порт: {self.CONFIG['cs2_gsi_port']})")
             except Exception as e:
-                print(f"[IRIS] Ошибка инициализации CS2 GSI: {e}")
+                print(f"[IRIS] ❌ Ошибка инициализации CS2 GSI: {e}")
                 self.CONFIG['cs2_integration'] = False
                 self.cs2_gsi = None
         else:
@@ -150,22 +169,26 @@ class IrisAssistant:
         print("[IRIS] Инициализация аудио контроллера...")
         try:
             self.audio_controller = WindowsAudioController()
+            print("[IRIS] ✅ Аудио контроллер готов")
         except Exception as e:
-            print(f"[IRIS] Ошибка инициализации аудио контроллера: {e}")
+            print(f"[IRIS] ❌ Ошибка инициализации аудио контроллера: {e}")
             self.audio_controller = None
     
     def _initialize_voice_input(self):
         """Инициализация системы голосового ввода"""
         print("[IRIS] Инициализация голосового ввода...")
         try:
-            self.voice_input = VoiceInput(
+            # Используем фабрику для создания голосового ввода
+            self.voice_input = create_voice_input(
                 wake_word=self.CONFIG["voice_wake_word"],
-                sensitivity=self.CONFIG["voice_sensitivity"]
+                sensitivity=self.CONFIG["voice_sensitivity"],
+                mode=self.CONFIG["voice_mode"]
             )
             self.voice_input.set_command_callback(self.process_voice_command)
             self.voice_input.set_wake_callback(self._on_wake_word)
+            print(f"[IRIS] ✅ Голосовой ввод готов. Wake word: '{self.CONFIG['voice_wake_word']}'")
         except Exception as e:
-            print(f"[IRIS] Ошибка инициализации голосового ввода: {e}")
+            print(f"[IRIS] ❌ Ошибка инициализации голосового ввода: {e}")
             self.voice_input = None
     
     def _initialize_achievements(self):
@@ -176,8 +199,9 @@ class IrisAssistant:
                 self.achievements = AchievementSystem(
                     achievement_callback=self._on_achievement
                 )
+                print("[IRIS] ✅ Система достижений готова")
             except Exception as e:
-                print(f"[IRIS] Ошибка инициализации системы достижений: {e}")
+                print(f"[IRIS] ❌ Ошибка инициализации системы достижений: {e}")
                 self.achievements = None
         else:
             self.achievements = None
@@ -192,8 +216,9 @@ class IrisAssistant:
                     self.stream_elements = StreamElementsClient(
                         event_callback=self._on_stream_event
                     )
+                    print("[IRIS] ✅ StreamElements клиент готов")
                 except Exception as e:
-                    print(f"[IRIS] Ошибка инициализации StreamElements: {e}")
+                    print(f"[IRIS] ❌ Ошибка инициализации StreamElements: {e}")
                     self.stream_elements = None
             else:
                 print("[IRIS] ⚠️ STREAMELEMENTS_JWT_TOKEN не настроен - чат недоступен")
@@ -209,16 +234,16 @@ class IrisAssistant:
             speaking: Флаг активности речи
             intensity: Интенсивность анимации (0.0-1.0)
         """
-        if VISUAL_AVAILABLE and self.visual:
+        if self.VISUAL_AVAILABLE and self.visual:
             self.visual.set_speaking(speaking, intensity)
     
     def _on_wake_word(self):
         """Обработка обнаружения wake word"""
-        print("[IRIS] Wake word обнаружен!")
+        print("[IRIS] 🔔 Wake word обнаружен!")
         if self.tts:
             self.tts.speak("Да?", emotion='neutral', priority=True)
         
-        if VISUAL_AVAILABLE and self.visual:
+        if self.VISUAL_AVAILABLE and self.visual:
             self.visual.pulse_animation(1.5, 0.8)
     
     def process_voice_command(self, command: str):
@@ -295,7 +320,7 @@ class IrisAssistant:
                     response = f"Интересно! Ты сказал: {command}"
                     emotion = 'neutral'
             except Exception as e:
-                print(f"[IRIS] Ошибка AI: {e}")
+                print(f"[IRIS] ❌ Ошибка AI: {e}")
                 response = "Хм, дай мне секунду подумать..."
                 emotion = 'neutral'
         
@@ -304,7 +329,7 @@ class IrisAssistant:
             self.tts.speak(response, emotion=emotion)
         
         # Визуальная обратная связь
-        if VISUAL_AVAILABLE and self.visual:
+        if self.VISUAL_AVAILABLE and self.visual:
             self.visual.show_message(response[:50])
     
     def _on_cs2_event(self, event: GameEvent):
@@ -329,7 +354,7 @@ class IrisAssistant:
                 event={'type': event.event_type, 'data': event.data}
             )
         except Exception as e:
-            print(f"[CS2] Ошибка обновления контекста: {e}")
+            print(f"[CS2] ❌ Ошибка обновления контекста: {e}")
         
         response = None
         emotion = 'neutral'
@@ -392,7 +417,7 @@ class IrisAssistant:
             self.tts.speak(response, emotion=emotion)
         
         # Визуальная реакция
-        if VISUAL_AVAILABLE and self.visual:
+        if self.VISUAL_AVAILABLE and self.visual:
             if emotion == 'excited':
                 self.visual.pulse_animation(2.0, 1.0)
             elif emotion == 'supportive':
@@ -458,13 +483,13 @@ class IrisAssistant:
         Args:
             achievement: Объект достижения
         """
-        print(f"[ACHIEVEMENT] Разблокировано: {achievement.name}")
+        print(f"[ACHIEVEMENT] 🏆 Разблокировано: {achievement.name}")
         message = f"Достижение разблокировано! {achievement.icon} {achievement.name}!"
         
         if self.tts:
             self.tts.speak(message, emotion='excited', priority=True)
         
-        if VISUAL_AVAILABLE and self.visual:
+        if self.VISUAL_AVAILABLE and self.visual:
             self.visual.show_achievement(achievement.name, achievement.description)
     
     def _random_comment_loop(self):
@@ -489,11 +514,11 @@ class IrisAssistant:
                     if comment:
                         self.tts.speak(comment, emotion='neutral')
                         
-                        if VISUAL_AVAILABLE and self.visual:
+                        if self.VISUAL_AVAILABLE and self.visual:
                             self.visual.show_message(comment[:40])
                             
             except Exception as e:
-                print(f"[IRIS] Ошибка в цикле комментариев: {e}")
+                print(f"[IRIS] ❌ Ошибка в цикле комментариев: {e}")
     
     def _run_startup_sequence(self):
         """
@@ -524,7 +549,7 @@ class IrisAssistant:
         
         # Проход по этапам запуска
         for phrase, phase, duration in startup_phrases:
-            if VISUAL_AVAILABLE and self.visual:
+            if self.VISUAL_AVAILABLE and self.visual:
                 self.visual.animate_phase(phase, duration)
             
             self.tts.speak(phrase, emotion='neutral')
@@ -536,7 +561,7 @@ class IrisAssistant:
             time.sleep(0.3)
         
         # Финальное приветствие
-        if VISUAL_AVAILABLE and self.visual:
+        if self.VISUAL_AVAILABLE and self.visual:
             self.visual.play_sound('ready', 0.8)
             time.sleep(0.3)
         
@@ -555,7 +580,7 @@ class IrisAssistant:
         print("\n[IRIS] 🚀 Запуск основных систем...")
         
         # Запуск визуального интерфейса (если доступен)
-        if VISUAL_AVAILABLE and self.CONFIG['visual_enabled'] and self.visual:
+        if self.VISUAL_AVAILABLE and self.CONFIG['visual_enabled'] and self.visual:
             print("[IRIS] Запуск визуального интерфейса...")
             
             def on_power_up_complete():
@@ -577,27 +602,27 @@ class IrisAssistant:
             try:
                 self.cs2_gsi.start()
                 self.cs2_gsi.save_config_file()
-                print(f"[IRIS] CS2 GSI запущен на порту {self.CONFIG['cs2_gsi_port']}")
+                print(f"[IRIS] ✅ CS2 GSI запущен на порту {self.CONFIG['cs2_gsi_port']}")
             except Exception as e:
-                print(f"[IRIS] Ошибка запуска CS2 GSI: {e}")
+                print(f"[IRIS] ❌ Ошибка запуска CS2 GSI: {e}")
         
         # Подключение к StreamElements
         if self.CONFIG['streamelements_enabled'] and self.stream_elements:
             print("\n[IRIS] Подключение к StreamElements...")
             try:
                 self.stream_elements.connect()
-                print("[IRIS] StreamElements подключен успешно")
+                print("[IRIS] ✅ StreamElements подключен успешно")
             except Exception as e:
-                print(f"[IRIS] Ошибка подключения к StreamElements: {e}")
+                print(f"[IRIS] ❌ Ошибка подключения к StreamElements: {e}")
         
         # Запуск голосового ввода
         if self.voice_input:
             print("\n[IRIS] Запуск голосового ввода...")
             try:
                 self.voice_input.start()
-                print(f"[IRIS] Голосовой ввод активирован. Wake word: '{self.CONFIG['voice_wake_word']}'")
+                print(f"[IRIS] ✅ Голосовой ввод активирован. Wake word: '{self.CONFIG['voice_wake_word']}'")
             except Exception as e:
-                print(f"[IRIS] Ошибка запуска голосового ввода: {e}")
+                print(f"[IRIS] ❌ Ошибка запуска голосового ввода: {e}")
         
         # Запуск цикла случайных комментариев
         print("\n[IRIS] Запуск цикла случайных комментариев...")
@@ -644,7 +669,7 @@ class IrisAssistant:
         else:
             print("   🏆 Система достижений (отключена)")
         
-        if VISUAL_AVAILABLE and self.CONFIG['visual_enabled'] and self.visual:
+        if self.VISUAL_AVAILABLE and self.CONFIG['visual_enabled'] and self.visual:
             print("   ✨ Визуальный интерфейс IO-style (активен)")
         else:
             print("   ✨ Визуальный интерфейс (отключен)")
@@ -653,9 +678,9 @@ class IrisAssistant:
         print("⚙️ Технологический стек:")
         print("   🎤 Голос: Нежный женский (Edge TTS)")
         print("   🧠 AI: Groq LLM + локальные модели")
-        print("   👂 Распознавание: Vosk (офлайн)")
+        print("   👂 Распознавание: Vosk/Google Speech")
         
-        if VISUAL_AVAILABLE and self.CONFIG['visual_enabled']:
+        if self.VISUAL_AVAILABLE and self.CONFIG['visual_enabled']:
             print("   👁️ Визуал: IO-style пульсирующий шар")
         
         print()
@@ -663,7 +688,7 @@ class IrisAssistant:
         print("   • Скажите 'Ирис' для активации голосового управления")
         print("   • Нажмите Ctrl+C в консоли для остановки")
         
-        if VISUAL_AVAILABLE and self.CONFIG['visual_enabled']:
+        if self.VISUAL_AVAILABLE and self.CONFIG['visual_enabled']:
             print("   • Нажмите ESC в окне визуализации для остановки")
         
         print()
@@ -683,12 +708,12 @@ class IrisAssistant:
             self.achievements.save_stats()
         
         # Остановка визуального интерфейса
-        if VISUAL_AVAILABLE and self.visual:
+        if self.VISUAL_AVAILABLE and self.visual:
             print("[IRIS] Остановка визуального интерфейса...")
             try:
                 self.visual.stop()
             except Exception as e:
-                print(f"[IRIS] Ошибка остановки визуального интерфейса: {e}")
+                print(f"[IRIS] ❌ Ошибка остановки визуального интерфейса: {e}")
         
         # Остановка голосового ввода
         if self.voice_input:
@@ -696,7 +721,7 @@ class IrisAssistant:
             try:
                 self.voice_input.stop()
             except Exception as e:
-                print(f"[IRIS] Ошибка остановки голосового ввода: {e}")
+                print(f"[IRIS] ❌ Ошибка остановки голосового ввода: {e}")
         
         # Отключение от StreamElements
         if self.stream_elements:
@@ -704,7 +729,7 @@ class IrisAssistant:
             try:
                 self.stream_elements.disconnect()
             except Exception as e:
-                print(f"[IRIS] Ошибка отключения от StreamElements: {e}")
+                print(f"[IRIS] ❌ Ошибка отключения от StreamElements: {e}")
         
         # Остановка CS2 интеграции
         if self.cs2_gsi:
@@ -712,7 +737,7 @@ class IrisAssistant:
             try:
                 self.cs2_gsi.stop()
             except Exception as e:
-                print(f"[IRIS] Ошибка остановки CS2 GSI: {e}")
+                print(f"[IRIS] ❌ Ошибка остановки CS2 GSI: {e}")
         
         # Остановка TTS
         if self.tts:
@@ -720,7 +745,7 @@ class IrisAssistant:
             try:
                 self.tts.stop()
             except Exception as e:
-                print(f"[IRIS] Ошибка остановки TTS: {e}")
+                print(f"[IRIS] ❌ Ошибка остановки TTS: {e}")
         
         # Короткая пауза для завершения операций
         time.sleep(1)
@@ -751,7 +776,7 @@ class IrisAssistant:
             # Основной цикл ожидания
             while self.is_running:
                 # Проверка состояния визуального интерфейса
-                if VISUAL_AVAILABLE and self.visual and not self.visual.running:
+                if self.VISUAL_AVAILABLE and self.visual and not self.visual.running:
                     print("[IRIS] Визуальный интерфейс закрыт, остановка...")
                     break
                 
@@ -817,7 +842,7 @@ def main():
         iris = IrisAssistant()
         iris.run()
     except Exception as e:
-        print(f"[FATAL] Критическая ошибка при запуске: {e}")
+        print(f"[FATAL] ❌ Критическая ошибка при запуске: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

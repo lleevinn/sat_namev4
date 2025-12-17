@@ -222,3 +222,30 @@
 2025-12-17 10:30:59,327 - IrisBrain - INFO - Генерация ответа для EventType.RANDOM_COMMENT
 =======
 >>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa
+2025-12-17 22:23:35,912 - VoiceInput - INFO - Vosk успешно импортирован
+2025-12-17 22:23:35,912 - VoiceInput - INFO - SpeechRecognition успешно импортирован
+2025-12-17 22:23:36,120 - VoiceInput - INFO - SoundDevice и NumPy успешно импортированы
+2025-12-17 22:23:36,120 - VoiceInput - INFO - PyAudio успешно импортирован
+2025-12-17 22:25:05,333 - VoiceInput - INFO - Vosk успешно импортирован
+2025-12-17 22:25:05,334 - VoiceInput - INFO - SpeechRecognition успешно импортирован
+2025-12-17 22:25:05,490 - VoiceInput - INFO - SoundDevice и NumPy успешно импортированы
+2025-12-17 22:25:05,490 - VoiceInput - INFO - PyAudio успешно импортирован
+2025-12-17 23:12:33,340 - VoiceInput - INFO - Vosk успешно импортирован
+2025-12-17 23:12:33,341 - VoiceInput - INFO - SpeechRecognition успешно импортирован
+2025-12-17 23:12:33,500 - VoiceInput - INFO - SoundDevice и NumPy успешно импортированы
+2025-12-17 23:12:33,500 - VoiceInput - INFO - PyAudio успешно импортирован
+2025-12-17 23:12:33,533 - IrisBrain - ERROR - Ошибка инициализации Groq: Client.__init__() got an unexpected keyword argument 'proxies'
+2025-12-17 23:12:33,534 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
+2025-12-17 23:12:33,534 - IrisBrain - INFO - Iris Brain инициализирован успешно
+2025-12-17 23:13:28,891 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:3000
+ * Running on http://192.168.31.140:3000
+2025-12-17 23:13:28,893 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-12-17 23:13:29,183 - websocket - INFO - Websocket connected
+2025-12-17 23:13:29,334 - websocket - ERROR - fin=1 opcode=8 data=b'' - goodbye
+2025-12-17 23:14:28,824 - VoiceInput - INFO - Статистика: 45 фраз, 0 wake, точность: 61.3%
+2025-12-17 23:14:58,824 - VoiceInput - INFO - Статистика: 98 фраз, 11 wake, точность: 61.8%
+2025-12-17 23:15:37,155 - VoiceInput - INFO - Статистика: 98 фраз, 11 wake, точность: 61.8%
+2025-12-17 23:16:07,156 - VoiceInput - INFO - Статистика: 98 фраз, 11 wake, точность: 61.8%
+2025-12-17 23:16:37,157 - VoiceInput - INFO - Статистика: 98 фраз, 11 wake, точность: 61.8%
