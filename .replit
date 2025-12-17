@@ -4,4 +4,31 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "espeak-ng", "ffmpeg-full", "fontconfig", "freetype", "libjpeg", "libpng", "pkg-config", "portaudio", "portmidi"]
+packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "espeak-ng", "ffmpeg-full", "fontconfig", "freetype", "libjpeg", "libpng", "pkg-config", "portaudio", "portmidi", "alsa-lib"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Iris Assistant"
+
+[[workflows.workflow]]
+name = "Iris Assistant"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3000
+externalPort = 80
