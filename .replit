@@ -1,10 +1,18 @@
 modules = ["python-3.11"]
 [agent]
 expertMode = true
+<<<<<<< HEAD
 
 [nix]
 channel = "stable-25_05"
 packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "espeak-ng", "ffmpeg-full", "fontconfig", "freetype", "libjpeg", "libpng", "pkg-config", "portaudio", "portmidi", "alsa-lib"]
+=======
+integrations = ["python_openai:1.0.0", "web_scraper:1.0.0"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "fontconfig", "freetype", "libjpeg", "libpng", "libxcrypt", "pkg-config", "portmidi", "xsimd"]
+>>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa
 
 [workflows]
 runButton = "Project"
@@ -22,6 +30,7 @@ args = "Iris Assistant"
 name = "Iris Assistant"
 author = "agent"
 
+<<<<<<< HEAD
 [workflows.workflow.metadata]
 outputType = "vnc"
 
@@ -32,3 +41,16 @@ args = "python main.py"
 [[ports]]
 localPort = 3000
 externalPort = 80
+=======
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 3000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
+>>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa

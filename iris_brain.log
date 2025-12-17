@@ -166,6 +166,7 @@
  * Running on http://127.0.0.1:3000
  * Running on http://192.168.31.140:3000
 2025-12-17 01:46:55,236 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+<<<<<<< HEAD
 2025-12-17 06:42:17,172 - IrisBrain - INFO - Groq клиент инициализирован с моделью llama-3.3-70b-versatile
 2025-12-17 06:42:17,173 - IrisBrain - WARNING - Groq временно отключен. Используется режим заглушек.
 2025-12-17 06:42:17,174 - IrisBrain - INFO - Iris Brain инициализирован успешно
@@ -219,3 +220,5 @@
  * Running on http://192.168.31.140:3000
 2025-12-17 10:24:59,352 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
 2025-12-17 10:30:59,327 - IrisBrain - INFO - Генерация ответа для EventType.RANDOM_COMMENT
+=======
+>>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa

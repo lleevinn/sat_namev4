@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 Iris Utils - Вспомогательные утилиты
 """
@@ -20,3 +21,6 @@ def synthesize_and_play(text: str, lang: str = 'ru', cleanup: bool = True) -> bo
     return True
 
 __all__ = ['synthesize_and_play']
+=======
+# Package initializer
+>>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa

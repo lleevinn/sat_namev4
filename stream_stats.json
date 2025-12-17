@@ -13,7 +13,11 @@
     "new_subscribers": 0,
     "raids_received": 0,
     "chat_messages": 0,
+<<<<<<< HEAD
     "stream_duration": 0.10016139560275608,
+=======
+    "stream_duration": 0.033334065278371176,
+>>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa
     "kill_streak_max": 0,
     "death_streak_max": 0,
     "current_kill_streak": 0,
@@ -123,5 +127,9 @@
       "progress": 0
     }
   },
+<<<<<<< HEAD
   "session_start": 1765956298.7466068
+=======
+  "session_start": 1765925215.2257519
+>>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa
 }
