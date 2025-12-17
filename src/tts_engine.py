@@ -1,575 +1,445 @@
 """
-<<<<<<< HEAD
-Iris TTS Engine - Нежный женский голос с Edge TTS
-Полностью бесплатный синтез речи с эмоциональными интонациями
+Модуль TTS (Text-to-Speech) движка для IRIS AI Companion
+Использует Edge TTS для высококачественного синтеза речи
 """
+
 import asyncio
-import tempfile
-import os
-import sys
 import threading
 import queue
 import time
-from pathlib import Path
-from typing import Optional, Dict, Callable
+import os
+from typing import Optional, Callable, Dict, Any
 
 try:
     import edge_tts
+    from edge_tts import VoicesManager
     EDGE_TTS_AVAILABLE = True
 except ImportError:
     EDGE_TTS_AVAILABLE = False
-    print("[TTS] edge-tts не установлен. Установите: pip install edge-tts")
-=======
-Модуль утилит для преобразования текста в речь (TTS).
-Вынесенная логика для чистоты основного движка.
-"""
-import tempfile
-import os
-import sys
-from pathlib import Path
-
-# Динамический импорт для гибкости и обработки отсутствия библиотек
-try:
-    from gtts import gTTS
-    GTTS_AVAILABLE = True
-except ImportError:
-    GTTS_AVAILABLE = False
-    print("Предупреждение: Библиотека 'gtts' не установлена. Установите: pip install gtts")
->>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa
+    print("[TTS] Edge TTS не установлен. Установите: pip install edge-tts")
 
 try:
     import pygame
     PYGAME_AVAILABLE = True
 except ImportError:
     PYGAME_AVAILABLE = False
-<<<<<<< HEAD
-    print("[TTS] pygame не установлен. Установите: pip install pygame")
+    print("[TTS] Pygame не установлен. Установите: pip install pygame")
 
 
 class TTSEngine:
     """
-    Движок синтеза речи с нежным женским голосом
-    Использует Edge TTS (бесплатный, высокое качество)
+    Асинхронный движок синтеза речи с очередью и приоритетами
+    Поддерживает эмоциональную окраску и визуальную обратную связь
     """
     
-    VOICES = {
-        'ru_female_soft': 'ru-RU-SvetlanaNeural',
-        'ru_female_warm': 'ru-RU-DariyaNeural', 
-        'ru_male': 'ru-RU-DmitryNeural',
-        'en_female_soft': 'en-US-JennyNeural',
-        'en_female_warm': 'en-US-AriaNeural',
-        'en_male': 'en-US-GuyNeural',
+    # Настройки голосов (Edge TTS)
+    VOICE_PRESETS = {
+        'ru_female_soft': 'ru-RU-SvetlanaNeural',      # Мягкий женский
+        'ru_female_energetic': 'ru-RU-DariyaNeural',   # Энергичный женский
+        'ru_male_deep': 'ru-RU-DmitryNeural',          # Глубокий мужской
+        'en_female': 'en-US-JennyNeural',              # Английский женский
+        'en_male': 'en-US-GuyNeural',                  # Английский мужской
     }
     
-    EMOTION_STYLES = {
-        'neutral': {'rate': '+0%', 'pitch': '+0Hz', 'volume': '+0%'},
-        'excited': {'rate': '+15%', 'pitch': '+3Hz', 'volume': '+10%'},
-        'happy': {'rate': '+10%', 'pitch': '+2Hz', 'volume': '+5%'},
-        'sad': {'rate': '-10%', 'pitch': '-2Hz', 'volume': '-5%'},
-        'supportive': {'rate': '-5%', 'pitch': '+1Hz', 'volume': '+0%'},
-        'sarcastic': {'rate': '-5%', 'pitch': '-1Hz', 'volume': '+0%'},
-        'tense': {'rate': '+20%', 'pitch': '+4Hz', 'volume': '+15%'},
-        'gentle': {'rate': '-15%', 'pitch': '+2Hz', 'volume': '-10%'},
-    }
-    
-    EMOTION_INTENSITY = {
-        'neutral': 0.5,
-        'excited': 1.0,
-        'happy': 0.8,
-        'sad': 0.3,
-        'supportive': 0.6,
-        'sarcastic': 0.4,
-        'tense': 0.9,
-        'gentle': 0.4,
+    # Настройки эмоций (изменение скорости и тона)
+    EMOTION_SETTINGS = {
+        'neutral': {'rate': 0, 'pitch': 0, 'volume': 100},
+        'happy': {'rate': 10, 'pitch': 5, 'volume': 110},
+        'excited': {'rate': 15, 'pitch': 10, 'volume': 120},
+        'gentle': {'rate': -5, 'pitch': -3, 'volume': 90},
+        'sad': {'rate': -10, 'pitch': -5, 'volume': 80},
+        'supportive': {'rate': 0, 'pitch': 2, 'volume': 100},
+        'tense': {'rate': 5, 'pitch': 0, 'volume': 105},
     }
     
     def __init__(self, 
                  voice: str = 'ru_female_soft',
                  rate: int = 0,
-                 volume: float = 1.0,
-                 lang: str = 'ru',
+                 volume: float = 0.9,
                  visual_callback: Optional[Callable] = None):
         """
         Инициализация TTS движка
         
         Args:
-            voice: Имя голоса из VOICES или прямое имя Edge TTS
-            rate: Скорость речи в процентах (-50 до +50)
-            volume: Громкость (0.0-1.0)
-            lang: Язык по умолчанию
+            voice: Предустановка голоса
+            rate: Скорость речи (-50 до 50)
+            volume: Громкость (0.0 до 1.0)
+            visual_callback: Функция для визуальной обратной связи
         """
-        self.voice_name = self.VOICES.get(voice, voice)
+        print("[TTS] Инициализация движка синтеза речи...")
+        
+        if not EDGE_TTS_AVAILABLE:
+            raise RuntimeError("Edge TTS не установлен. Установите: pip install edge-tts")
+        
+        if not PYGAME_AVAILABLE:
+            raise RuntimeError("Pygame не установлен. Установите: pip install pygame")
+        
+        # Инициализация pygame для воспроизведения
+        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=4096)
+        
+        # Настройки
+        self.voice_preset = voice
         self.base_rate = rate
         self.base_volume = volume
-        self.lang = lang
         self.visual_callback = visual_callback
         
-        self.speech_queue = queue.Queue()
-        self.is_speaking = False
-        self.stop_flag = False
-        self.current_emotion = 'neutral'
-        self.playback_available = False
+        # Очередь сообщений (текст, эмоция, приоритет)
+        self.message_queue = queue.PriorityQueue()
+        self.is_running = False
+        self.currently_speaking = False
+        self.current_task = None
         
-        self._init_pygame()
+        # Поток обработки очереди
+        self.processing_thread = None
         
-        self.worker_thread = threading.Thread(target=self._speech_worker, daemon=True)
-        self.worker_thread.start()
-        
-        print(f"[TTS] Инициализирован с голосом: {self.voice_name}")
-        print(f"[TTS] Edge TTS доступен: {EDGE_TTS_AVAILABLE}")
-        print(f"[TTS] Воспроизведение доступно: {self.playback_available}")
-    
-    def _init_pygame(self):
-        """Инициализация pygame mixer"""
-        if not PYGAME_AVAILABLE:
-            self.playback_available = False
-            return
-            
+        # Получение доступных голосов
         try:
-            pygame.mixer.pre_init(frequency=24000, size=-16, channels=1, buffer=512)
-            pygame.mixer.init()
-            self.playback_available = True
-            print("[TTS] Pygame mixer инициализирован")
+            self.available_voices = self._get_available_voices()
+            print(f"[TTS] Доступные голоса: {', '.join(list(self.VOICE_PRESETS.keys()))}")
         except Exception as e:
-            self.playback_available = False
-            print(f"[TTS] Воспроизведение недоступно (нет аудио устройств): {e}")
-            print("[TTS] Синтез речи будет работать, но воспроизведение отключено")
+            print(f"[TTS] Ошибка получения голосов: {e}")
+            self.available_voices = []
+        
+        print(f"[TTS] Движок инициализирован. Голос: {voice}, Громкость: {volume}")
     
-    def _get_rate_string(self, emotion: str = 'neutral') -> str:
-        """Получить строку скорости для SSML"""
-        emotion_rate = self.EMOTION_STYLES.get(emotion, {}).get('rate', '+0%')
-        base = int(emotion_rate.replace('%', '').replace('+', ''))
-        total = self.base_rate + base
-        sign = '+' if total >= 0 else ''
-        return f"{sign}{total}%"
+    def _get_available_voices(self) -> list:
+        """Получение списка доступных голосов"""
+        try:
+            # Edge TTS требует асинхронного контекста
+            voices = []
+            for name in self.VOICE_PRESETS.keys():
+                voices.append(name)
+            return voices
+        except Exception as e:
+            print(f"[TTS] Ошибка получения голосов: {e}")
+            return list(self.VOICE_PRESETS.keys())
     
-    def _get_pitch_string(self, emotion: str = 'neutral') -> str:
-        """Получить строку тона для SSML"""
-        return self.EMOTION_STYLES.get(emotion, {}).get('pitch', '+0Hz')
+    def _get_voice_id(self, emotion: str = 'neutral') -> str:
+        """Получение ID голоса с учетом эмоции"""
+        voice_name = self.voice_preset
+        
+        # Если голос не найден в пресетах, используем первый доступный
+        if voice_name not in self.VOICE_PRESETS:
+            voice_name = list(self.VOICE_PRESETS.keys())[0]
+            print(f"[TTS] Голос '{self.voice_preset}' не найден. Используем '{voice_name}'")
+        
+        return self.VOICE_PRESETS[voice_name]
     
-    def _get_volume_string(self, emotion: str = 'neutral') -> str:
-        """Получить строку громкости для SSML"""
-        return self.EMOTION_STYLES.get(emotion, {}).get('volume', '+0%')
+    def _get_speech_params(self, emotion: str = 'neutral') -> Dict[str, Any]:
+        """Получение параметров речи для эмоции"""
+        if emotion not in self.EMOTION_SETTINGS:
+            emotion = 'neutral'
+        
+        settings = self.EMOTION_SETTINGS[emotion]
+        return {
+            'rate': self.base_rate + settings['rate'],
+            'pitch': settings['pitch'],
+            'volume': self.base_volume * (settings['volume'] / 100)
+        }
     
-    async def _synthesize_async(self, text: str, emotion: str = 'neutral') -> Optional[str]:
+    async def _synthesize_speech(self, text: str, emotion: str = 'neutral') -> bytes:
         """
         Асинхронный синтез речи
         
+        Args:
+            text: Текст для синтеза
+            emotion: Эмоциональная окраска
+            
         Returns:
-            str: Путь к временному аудио файлу
+            bytes: Аудиоданные в формате MP3
         """
-        if not EDGE_TTS_AVAILABLE:
-            print("[TTS] Edge TTS недоступен")
-            return None
+        if not text or not isinstance(text, str):
+            raise ValueError("Текст должен быть непустой строкой")
         
         try:
-            rate = self._get_rate_string(emotion)
-            pitch = self._get_pitch_string(emotion)
-            volume = self._get_volume_string(emotion)
+            voice_id = self._get_voice_id(emotion)
+            params = self._get_speech_params(emotion)
             
-            communicate = edge_tts.Communicate(
-                text=text,
-                voice=self.voice_name,
-                rate=rate,
-                pitch=pitch,
-                volume=volume
-            )
+            # Формирование SSML с эмоциональными параметрами
+            ssml_text = f"""
+            <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ru-RU">
+                <voice name="{voice_id}">
+                    <prosody rate="{params['rate']}%" pitch="{params['pitch']}%">
+                        {text}
+                    </prosody>
+                </voice>
+            </speak>
+            """
             
-            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False, prefix='iris_tts_') as tmp:
-                output_path = tmp.name
+            # Синтез через Edge TTS
+            communicate = edge_tts.Communicate(ssml_text, voice_id)
             
-            await communicate.save(output_path)
+            # Сохранение в байты
+            audio_data = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_data += chunk["data"]
             
-            return output_path
+            print(f"[TTS] Синтезировано: '{text[:50]}{'...' if len(text) > 50 else ''}'")
+            return audio_data
             
         except Exception as e:
             print(f"[TTS] Ошибка синтеза: {e}")
-            return None
+            raise
     
-    def _play_audio(self, file_path: str, emotion: str = 'neutral') -> bool:
-        """Воспроизведение аудио файла с визуальной обратной связью"""
-        if not self.playback_available:
-            print(f"[TTS] Воспроизведение пропущено (нет аудио): {os.path.basename(file_path)}")
-            return False
+    def _play_audio(self, audio_data: bytes) -> bool:
+        """
+        Воспроизведение аудиоданных
         
-        if not os.path.exists(file_path):
-            print(f"[TTS] Файл не найден: {file_path}")
-            return False
-        
-        try:
-            if not pygame.mixer.get_init():
-                self._init_pygame()
-                if not self.playback_available:
-                    return False
+        Args:
+            audio_data: Байты аудио в формате MP3
             
-            pygame.mixer.music.load(file_path)
+        Returns:
+            bool: Успешность воспроизведения
+        """
+        try:
+            # Создание временного файла
+            import tempfile
+            import os
+            
+            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp_file:
+                tmp_path = tmp_file.name
+                tmp_file.write(audio_data)
+            
+            # Загрузка и воспроизведение
+            pygame.mixer.music.load(tmp_path)
             pygame.mixer.music.set_volume(self.base_volume)
             pygame.mixer.music.play()
             
-            intensity = self.EMOTION_INTENSITY.get(emotion, 0.5)
-            if self.visual_callback:
-                self.visual_callback(True, intensity)
-            
-            pulse_phase = 0
-            while pygame.mixer.music.get_busy() and not self.stop_flag:
+            # Ожидание окончания воспроизведения
+            while pygame.mixer.music.get_busy():
+                pygame.time.Clock().tick(10)
+                # Обновление визуальной обратной связи
                 if self.visual_callback:
-                    import math
-                    pulse_intensity = intensity * (0.7 + 0.3 * math.sin(pulse_phase * 8))
-                    self.visual_callback(True, pulse_intensity)
-                    pulse_phase += 0.05
-                time.sleep(0.05)
+                    self.visual_callback(True, 0.7)
             
-            if self.visual_callback:
-                self.visual_callback(False, 0)
-            
+            # Остановка и очистка
             pygame.mixer.music.stop()
+            pygame.mixer.music.unload()
+            
+            # Удаление временного файла
+            os.unlink(tmp_path)
+            
+            # Сброс визуальной обратной связи
+            if self.visual_callback:
+                self.visual_callback(False, 0.0)
+            
             return True
             
         except Exception as e:
             print(f"[TTS] Ошибка воспроизведения: {e}")
             if self.visual_callback:
-                self.visual_callback(False, 0)
+                self.visual_callback(False, 0.0)
             return False
-        finally:
-            try:
-                os.unlink(file_path)
-            except:
-                pass
     
-    def _speech_worker(self):
-        """Рабочий поток для обработки очереди речи"""
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    def _process_queue(self):
+        """Основной цикл обработки очереди сообщений"""
+        print("[TTS] Запуск обработчика очереди...")
         
-        while not self.stop_flag:
+        while self.is_running:
             try:
-                item = self.speech_queue.get(timeout=0.5)
-                if item is None:
-                    continue
+                # Получение сообщения из очереди (приоритет, счетчик, данные)
+                priority, count, (text, emotion) = self.message_queue.get(timeout=0.1)
                 
-                text, emotion, priority, callback = item
+                # Установка флага речи
+                self.currently_speaking = True
                 
-                self.is_speaking = True
-                self.current_emotion = emotion
+                try:
+                    # Синтез речи (в отдельном потоке для asyncio)
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
+                    audio_data = loop.run_until_complete(
+                        self._synthesize_speech(text, emotion)
+                    )
+                    loop.close()
+                    
+                    # Воспроизведение
+                    if audio_data:
+                        success = self._play_audio(audio_data)
+                        if not success:
+                            print(f"[TTS] Ошибка воспроизведения сообщения: {text[:30]}")
                 
-                print(f"[TTS] Синтезирую: '{text[:50]}...' эмоция: {emotion}")
+                except Exception as e:
+                    print(f"[TTS] Ошибка обработки сообщения: {e}")
                 
-                audio_file = loop.run_until_complete(
-                    self._synthesize_async(text, emotion)
-                )
-                
-                if audio_file:
-                    success = self._play_audio(audio_file, emotion)
-                    if callback:
-                        callback(success)
-                
-                self.is_speaking = False
-                self.speech_queue.task_done()
-                
+                finally:
+                    self.currently_speaking = False
+                    self.message_queue.task_done()
+                    
             except queue.Empty:
+                # Очередь пуста, продолжаем ожидание
                 continue
             except Exception as e:
-                print(f"[TTS] Ошибка в рабочем потоке: {e}")
-                self.is_speaking = False
-        
-        loop.close()
+                print(f"[TTS] Ошибка в цикле обработки: {e}")
+                self.currently_speaking = False
     
-    def speak(self, 
-              text: str, 
-              emotion: str = 'neutral',
-              priority: bool = False,
-              callback: Optional[Callable] = None):
+    def speak(self, text: str, emotion: str = 'neutral', priority: bool = False):
         """
-        Озвучить текст с указанной эмоцией
+        Добавление сообщения в очередь на озвучивание
         
         Args:
             text: Текст для озвучивания
-            emotion: Эмоция (neutral, excited, happy, sad, supportive, sarcastic, tense, gentle)
-            priority: Если True, прерывает текущую речь
-            callback: Функция обратного вызова после озвучивания
+            emotion: Эмоциональная окраска
+            priority: Приоритетное сообщение (ставится в начало очереди)
         """
-        if not text or not text.strip():
+        if not text or not isinstance(text, str):
+            print("[TTS] Пустой текст для озвучивания")
             return
         
-        text = text.strip()
+        # Подготовка сообщения
+        emotion = emotion if emotion in self.EMOTION_SETTINGS else 'neutral'
         
-        if priority and self.is_speaking:
-            self.interrupt()
+        # Приоритет: 0 - высокий, 1 - нормальный, 2 - низкий
+        message_priority = 0 if priority else 1
         
-        self.speech_queue.put((text, emotion, priority, callback))
-        print(f"[TTS] В очередь: '{text[:30]}...' (эмоция: {emotion})")
-    
-    def speak_with_pauses(self, text: str, emotion: str = 'neutral'):
-        """Озвучить текст с естественными паузами между предложениями"""
-        sentences = text.replace('!', '.').replace('?', '.').split('.')
-        sentences = [s.strip() for s in sentences if s.strip()]
+        # Счетчик для сохранения порядка при одинаковом приоритете
+        counter = time.time() * 1000
         
-        for sentence in sentences:
-            self.speak(sentence, emotion)
-    
-    def interrupt(self):
-        """Прервать текущую речь"""
-        if PYGAME_AVAILABLE and pygame.mixer.get_init():
-            pygame.mixer.music.stop()
-        
-        while not self.speech_queue.empty():
-            try:
-                self.speech_queue.get_nowait()
-                self.speech_queue.task_done()
-            except:
-                break
+        try:
+            # Добавление в очередь
+            self.message_queue.put((message_priority, counter, (text, emotion)))
+            
+            if priority:
+                print(f"[TTS] Приоритетное сообщение добавлено: '{text[:50]}...'")
+            else:
+                print(f"[TTS] Сообщение добавлено в очередь: '{text[:50]}...'")
+                
+        except Exception as e:
+            print(f"[TTS] Ошибка добавления в очередь: {e}")
     
     def is_busy(self) -> bool:
-        """Проверка, говорит ли сейчас"""
-        return self.is_speaking or not self.speech_queue.empty()
+        """
+        Проверка, занят ли движок
+        
+        Returns:
+            bool: True если идет синтез или воспроизведение
+        """
+        return self.currently_speaking or not self.message_queue.empty()
     
-    def set_voice(self, voice: str):
-        """Сменить голос"""
-        self.voice_name = self.VOICES.get(voice, voice)
-        print(f"[TTS] Голос изменён на: {self.voice_name}")
-    
-    def set_rate(self, rate: int):
-        """Установить скорость речи (-50 до +50)"""
-        self.base_rate = max(-50, min(50, rate))
-    
-    def set_volume(self, volume: float):
-        """Установить громкость (0.0-1.0)"""
-        self.base_volume = max(0.0, min(1.0, volume))
-    
-    def set_visual_callback(self, callback: Optional[Callable]):
-        """Установить callback для визуальной обратной связи"""
-        self.visual_callback = callback
+    def start(self):
+        """Запуск движка TTS"""
+        if self.is_running:
+            print("[TTS] Движок уже запущен")
+            return
+        
+        self.is_running = True
+        
+        # Запуск потока обработки очереди
+        self.processing_thread = threading.Thread(
+            target=self._process_queue,
+            daemon=True,
+            name="TTS-Processor"
+        )
+        self.processing_thread.start()
+        
+        print("[TTS] Движок запущен")
     
     def stop(self):
-        """Остановить движок"""
-        self.stop_flag = True
-        self.interrupt()
+        """Остановка движка TTS"""
+        if not self.is_running:
+            return
         
-        if PYGAME_AVAILABLE and pygame.mixer.get_init():
-            pygame.mixer.quit()
+        print("[TTS] Остановка движка...")
+        self.is_running = False
+        
+        # Очистка очереди
+        while not self.message_queue.empty():
+            try:
+                self.message_queue.get_nowait()
+                self.message_queue.task_done()
+            except queue.Empty:
+                break
+        
+        # Ожидание завершения потока
+        if self.processing_thread and self.processing_thread.is_alive():
+            self.processing_thread.join(timeout=2.0)
+        
+        # Остановка pygame
+        pygame.mixer.music.stop()
+        pygame.mixer.quit()
         
         print("[TTS] Движок остановлен")
     
-    @staticmethod
-    async def list_voices(lang_filter: str = 'ru') -> list:
-        """Получить список доступных голосов"""
-        if not EDGE_TTS_AVAILABLE:
-            return []
+    def change_voice(self, voice_name: str):
+        """
+        Смена голоса
         
-        try:
-            voices = await edge_tts.list_voices()
-            if lang_filter:
-                voices = [v for v in voices if lang_filter.lower() in v['Locale'].lower()]
-            return voices
-        except Exception as e:
-            print(f"[TTS] Ошибка получения голосов: {e}")
-            return []
-
-
-def synthesize_and_play(text: str, lang: str = 'ru', cleanup: bool = True) -> bool:
-    """
-    Быстрая функция для синтеза и воспроизведения
-    Совместимость со старым API
-    """
-    engine = TTSEngine(voice='ru_female_soft')
-    engine.speak(text, emotion='neutral')
-    
-    while engine.is_busy():
-        time.sleep(0.1)
-    
-    engine.stop()
-    return True
-
-
-if __name__ == "__main__":
-    print("=== Тест TTS Engine ===")
-    
-    tts = TTSEngine(voice='ru_female_soft')
-    
-    print("\nТест 1: Нейтральный голос")
-    tts.speak("Привет! Я Ирис, твой голосовой ассистент.", emotion='neutral')
-    
-    while tts.is_busy():
-        time.sleep(0.1)
-    
-    print("\nТест 2: Взволнованный голос")
-    tts.speak("Ух ты! Отличный выстрел! Красавчик!", emotion='excited')
-    
-    while tts.is_busy():
-        time.sleep(0.1)
-    
-    print("\nТест 3: Нежный голос")
-    tts.speak("Не переживай, в следующий раз обязательно получится.", emotion='gentle')
-    
-    while tts.is_busy():
-        time.sleep(0.1)
-    
-    tts.stop()
-    print("\n=== Тест завершён ===")
-=======
-    print("Предупреждение: Библиотека 'pygame' не установлена. Установите: pip install pygame")
-
-# Добавляем корень проекта в путь для импорта других модулей, если потребуется
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
-
-def synthesize_to_file(text, lang='ru', output_path=None, slow=False):
-    """
-    Синтезирует речь из текста и сохраняет в аудиофайл.
-    
-    Аргументы:
-        text (str): Текст для озвучивания.
-        lang (str): Код языка (например, 'ru', 'en'). По умолчанию 'ru'.
-        output_path (str, optional): Путь для сохранения файла.
-                                     Если None, создается временный файл.
-        slow (bool): Медленный режим речи (для gTTS). По умолчанию False.
-    
-    Возвращает:
-        str: Путь к созданному аудиофайлу.
-    
-    Исключения:
-        RuntimeError: Если библиотека gTTS недоступна или произошла ошибка синтеза.
-    """
-    if not GTTS_AVAILABLE:
-        raise RuntimeError("Библиотека gTTS не установлена. Функция синтеза недоступна.")
-    
-    if not text or not isinstance(text, str):
-        raise ValueError("Текст для синтеза должен быть непустой строкой.")
-    
-    try:
-        tts = gTTS(text=text, lang=lang, slow=slow)
-        
-        if output_path is None:
-            # Создаем временный файл с понятным префиксом
-            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False, prefix='tts_') as tmp:
-                output_path = tmp.name
-        
-        tts.save(output_path)
-        print(f"[TTS] Текст синтезирован в файл: {output_path}")
-        return output_path
-        
-    except Exception as e:
-        raise RuntimeError(f"Ошибка синтеза речи с gTTS: {e}") from e
-
-def play_audio(file_path):
-    """
-    Воспроизводит аудиофайл с помощью pygame.
-    
-    Аргументы:
-        file_path (str): Путь к аудиофайлу.
-    
-    Возвращает:
-        bool: True, если воспроизведение успешно, иначе False.
-    """
-    if not PYGAME_AVAILABLE:
-        print("Ошибка: Библиотека 'pygame' не установлена для воспроизведения.")
-        return False
-    
-    if not os.path.exists(file_path):
-        print(f"Ошибка: Аудиофайл не найден: {file_path}")
-        return False
-    
-    try:
-        pygame.mixer.init()
-        pygame.mixer.music.load(file_path)
-        pygame.mixer.music.play()
-        
-        # Ожидание окончания воспроизведения
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
-        
-        pygame.mixer.music.stop()
-        pygame.mixer.quit()
-        return True
-        
-    except Exception as e:
-        print(f"Ошибка воспроизведения аудио: {e}")
-        return False
-
-def synthesize_and_play(text, lang='ru', cleanup=True):
-    """
-    Основная высокоуровневая функция: синтез и немедленное воспроизведение.
-    
-    Аргументы:
-        text (str): Текст для озвучивания.
-        lang (str): Код языка. По умолчанию 'ru'.
-        cleanup (bool): Удалять ли временный файл после воспроизведения. По умолчанию True.
-    
-    Возвращает:
-        bool: Общий успех операции.
-    """
-    temp_file = None
-    try:
-        # 1. Синтез во временный файл
-        temp_file = synthesize_to_file(text, lang=lang)
-        
-        # 2. Воспроизведение
-        success = play_audio(temp_file)
-        
-        if success:
-            print(f"[TTS] Успешно озвучено: '{text[:50]}{'...' if len(text) > 50 else ''}'")
+        Args:
+            voice_name: Имя голоса из пресетов
+        """
+        if voice_name in self.VOICE_PRESETS:
+            self.voice_preset = voice_name
+            print(f"[TTS] Голос изменен на: {voice_name}")
         else:
-            print("[TTS] Не удалось воспроизвести аудио.")
+            print(f"[TTS] Голос '{voice_name}' не найден. Доступные: {', '.join(self.VOICE_PRESETS.keys())}")
+    
+    def change_volume(self, volume: float):
+        """
+        Изменение громкости
         
-        return success
+        Args:
+            volume: Громкость от 0.0 до 1.0
+        """
+        if 0.0 <= volume <= 1.0:
+            self.base_volume = volume
+            print(f"[TTS] Громкость изменена на: {volume}")
+        else:
+            print(f"[TTS] Некорректная громкость: {volume}. Должна быть от 0.0 до 1.0")
+    
+    def clear_queue(self):
+        """Очистка очереди сообщений"""
+        queue_size = self.message_queue.qsize()
+        
+        while not self.message_queue.empty():
+            try:
+                self.message_queue.get_nowait()
+                self.message_queue.task_done()
+            except queue.Empty:
+                break
+        
+        print(f"[TTS] Очередь очищена. Удалено сообщений: {queue_size}")
+
+
+# Простой тест модуля
+if __name__ == "__main__":
+    print("=== Тест TTS движка ===")
+    
+    def test_visual_callback(speaking: bool, intensity: float):
+        print(f"[VISUAL] Speaking: {speaking}, Intensity: {intensity}")
+    
+    try:
+        tts = TTSEngine(
+            voice='ru_female_soft',
+            volume=0.8,
+            visual_callback=test_visual_callback
+        )
+        
+        tts.start()
+        
+        # Тестовые фразы
+        print("\n1. Тестовая фраза (нейтральная):")
+        tts.speak("Привет! Это тестовая фраза для проверки работы TTS движка.", emotion='neutral')
+        
+        time.sleep(3)
+        
+        print("\n2. Тестовая фраза (радостная):")
+        tts.speak("Отлично! Система работает прекрасно! Это очень здорово!", emotion='happy')
+        
+        time.sleep(3)
+        
+        print("\n3. Тестовая фраза (приоритетная):")
+        tts.speak("Внимание! Это приоритетное сообщение!", emotion='excited', priority=True)
+        
+        # Ожидание завершения
+        print("\nОжидание завершения воспроизведения...")
+        while tts.is_busy():
+            time.sleep(0.5)
+        
+        print("\nВсе тесты завершены!")
+        tts.stop()
         
     except Exception as e:
-        print(f"[TTS] Ошибка в процессе синтеза и воспроизведения: {e}")
-        return False
-        
-    finally:
-        # 3. Очистка временного файла
-        if cleanup and temp_file and os.path.exists(temp_file):
-            try:
-                os.unlink(temp_file)
-                # print(f"[TTS] Временный файл удален: {temp_file}")
-            except OSError as e:
-                print(f"[TTS] Не удалось удалить временный файл {temp_file}: {e}")
-
-def list_languages():
-    """
-    Выводит в консоль список поддерживаемых gTTS языков.
-    """
-    if not GTTS_AVAILABLE:
-        print("gTTS не доступен для получения списка языков.")
-        return
-    
-    # Основные языки, поддерживаемые gTTS
-    languages = {
-        'ru': 'Русский',
-        'en': 'Английский',
-        'de': 'Немецкий',
-        'fr': 'Французский',
-        'es': 'Испанский',
-        'it': 'Итальянский',
-        'ja': 'Японский',
-        'ko': 'Корейский',
-        'zh-CN': 'Китайский (упрощенный)',
-        'zh-TW': 'Китайский (традиционный)',
-    }
-    
-    print("Поддерживаемые языки (основные):")
-    for code, name in languages.items():
-        print(f"  {code}: {name}")
-
-# Блок для простого тестирования модуля
-if __name__ == "__main__":
-    print("=== Тестирование модуля TTS утилит ===")
-    
-    # Проверка доступности библиотек
-    print(f"gTTS доступен: {GTTS_AVAILABLE}")
-    print(f"Pygame доступен: {PYGAME_AVAILABLE}")
-    
-    if GTTS_AVAILABLE:
-        # Тестовый синтез и воспроизведение
-        test_text = "Привет! Это тестовая фраза русского текста. Работает!"
-        print(f"\nТестируем синтез фразы: '{test_text}'")
-        
-        result = synthesize_and_play(test_text, lang='ru', cleanup=True)
-        print(f"Результат теста: {'УСПЕХ' if result else 'НЕУДАЧА'}")
-        
-        # Показ языков
-        list_languages()
-    else:
-        print("\nУстановите gtts для тестирования: pip install gtts pygame")
->>>>>>> 6d0ea0cd1396a0d7b9b7fabfc564c9750f26d5aa
+        print(f"Ошибка теста: {e}")
+        import traceback
+        traceback.print_exc()
