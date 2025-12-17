@@ -1,0 +1,36 @@
+modules = ["python-3.11"]
+[agent]
+expertMode = true
+integrations = ["python_openai:1.0.0", "web_scraper:1.0.0"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["SDL2", "SDL2_image", "SDL2_mixer", "SDL2_ttf", "fontconfig", "freetype", "libjpeg", "libpng", "libxcrypt", "pkg-config", "portmidi", "xsimd"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Iris Assistant"
+
+[[workflows.workflow]]
+name = "Iris Assistant"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
+waitForPort = 3000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 3000
+externalPort = 3000
