@@ -15,7 +15,15 @@ from typing import Dict, List, Optional, Any, Tuple
 from collections import deque, defaultdict
 from dataclasses import dataclass, asdict
 from enum import Enum
-from groq import Groq
+
+# Попробуем импортировать GroqCloud
+try:
+    from groqcloud import GroqCloud
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
+    print("[IrisBrain] Модуль groqcloud не установлен. Установите: pip install groqcloud")
+    GroqCloud = None
 
 
 # ===================== НАСТРОЙКА ЛОГГИРОВАНИЯ =====================
@@ -168,15 +176,15 @@ class IrisBrain:
         if api_key is None:
             api_key = os.getenv('GROQ_API_KEY')
             
-        if not api_key:
-            logger.error("GROQ_API_KEY не настроен! Используются заглушки.")
+        if not api_key or not GROQ_AVAILABLE:
+            logger.error("GROQ_API_KEY не настроен или библиотека не установлена! Используются заглушки.")
             self.client = None
             self.fallback_mode = True
         else:
             try:
-                self.client = Groq(api_key=api_key)  # Исправлено: = вместо -
+                self.client = GroqCloud(api_key=api_key)
                 self.fallback_mode = False
-                logger.info(f"Groq клиент инициализирован с моделью {model}")  # Исправлено: {model}
+                logger.info(f"Groq клиент инициализирован с моделью {model}")
             except Exception as e:
                 logger.error(f"Ошибка инициализации Groq: {e}")
                 self.client = None
@@ -223,12 +231,6 @@ class IrisBrain:
         # Счётчики разнообразия реакций
         self.response_variety: Dict[str, int] = defaultdict(int)
 
-        # Временное исправление: принудительно включаем fallback-режим
-        self.client = None
-        self.fallback_mode = True
-        
-        logger.warning("Groq временно отключен. Используется режим заглушек.")
-        
         # Статистика использования
         self.stats: Dict[str, Any] = {
             'total_responses': 0,
@@ -443,6 +445,8 @@ class IrisBrain:
                 
                 # Вызов API Groq
                 start_time = time.time()
+                
+                # Используем GroqCloud API
                 response_obj = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
@@ -452,6 +456,7 @@ class IrisBrain:
                     frequency_penalty=0.1,
                     presence_penalty=0.1,
                 )
+                
                 elapsed = time.time() - start_time
                 
                 # Извлечение ответа
@@ -883,7 +888,7 @@ class IrisBrain:
         prompt = f"Зритель {username} написал в чат: \"{message}\""
         
         if iris_mentioned:
-            prompt += "\nОн обратился к тебе напрямую! Ответь вежливо и по делу."
+            prompt += "\nОн обратился к тебе напрямю! Ответь вежливо и по делу."
         else:
             prompt += "\nМожешь ответить кратко, если есть что сказать интересного."
         
