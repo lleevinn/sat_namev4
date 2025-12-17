@@ -43,25 +43,33 @@ class StreamElementsClient:
         self.heartbeat_thread = None
         
     def connect(self):
+        """Подключение к StreamElements WebSocket"""
         try:
             print("[StreamElements] Подключение...")
-        if not self.jwt_token or self.jwt_token == "your_jwt_token_here":
-            print("[StreamElements] ⚠️ JWT токен не настроен, пропускаем подключение")
-        return
             
-        self.ws = websocket.WebSocketApp(
-            self.WS_URL,
-            on_open=self._on_open,
-            on_message=self._on_message,
-            on_error=self._on_error,
-            on_close=self._on_close
-        )
-        
-        self.ws_thread = threading.Thread(target=self._run_forever, daemon=True)
-        self.ws_thread.start()
-        return True
+            if not self.jwt_token or self.jwt_token == "your_jwt_token_here":
+                print("[StreamElements] ⚠️ JWT токен не настроен, пропускаем подключение")
+                return
+            
+            self.ws = websocket.WebSocketApp(
+                self.WS_URL,
+                on_open=self._on_open,
+                on_message=self._on_message,
+                on_error=self._on_error,
+                on_close=self._on_close
+            )
+            
+            self.ws_thread = threading.Thread(target=self._run_forever, daemon=True)
+            self.ws_thread.start()
+            
+            return True
+            
+        except Exception as e:
+            print(f"[StreamElements] Ошибка подключения: {e}")
+            return False
         
     def _run_forever(self):
+        """Бесконечный цикл подключения"""
         while True:
             try:
                 self.ws.run_forever()
@@ -76,11 +84,13 @@ class StreamElementsClient:
             self.reconnect_delay = min(self.reconnect_delay * 2, self.max_reconnect_delay)
             
     def _on_open(self, ws):
+        """Обработчик открытия соединения"""
         print("[StreamElements] WebSocket соединение открыто")
         self._authenticate()
         self._start_heartbeat()
         
     def _authenticate(self):
+        """Аутентификация с JWT токеном"""
         auth_message = json.dumps({
             "method": "jwt",
             "token": self.jwt_token
@@ -89,18 +99,20 @@ class StreamElementsClient:
         print("[StreamElements] Отправлен запрос авторизации")
         
     def _start_heartbeat(self):
+        """Запуск heartbeat для поддержания соединения"""
         def heartbeat():
             while self.is_connected:
                 try:
                     self.ws.send("2")
                     time.sleep(25)
-                except:
+                except Exception:
                     break
                     
         self.heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
         self.heartbeat_thread.start()
         
     def _on_message(self, ws, message: str):
+        """Обработчик входящих сообщений"""
         try:
             if message.startswith('0'):
                 self.is_connected = True
@@ -121,44 +133,51 @@ class StreamElementsClient:
                         event_data = data[1] if len(data) > 1 else {}
                         self._handle_event(event_type, event_data)
                 except json.JSONDecodeError:
-                    pass
+                    print(f"[StreamElements] Ошибка декодирования JSON: {data_str}")
                 return
                 
             if message == '3':
-                return
+                return  # Heartbeat response
                 
         except Exception as e:
             print(f"[StreamElements] Ошибка обработки сообщения: {e}")
             
     def _handle_event(self, event_type: str, event_data: Dict):
+        """Обработка события"""
         stream_event = StreamEvent(event_type=event_type, data=event_data)
         self.events_history.append(stream_event)
         
-        if event_type == 'event':
-            self._process_stream_event(event_data)
-        elif event_type == 'event:test':
+        if event_type == 'event' or event_type == 'event:test':
             self._process_stream_event(event_data)
         elif event_type == 'message':
             self._process_chat_message(event_data)
+        else:
+            print(f"[StreamElements] Неизвестный тип события: {event_type}")
             
     def _process_stream_event(self, data: Dict):
+        """Обработка stream события"""
         listener = data.get('listener', '')
         event_data = data.get('event', data)
         
-        if listener == 'tip' or data.get('type') == 'tip':
+        event_type = data.get('type', '')
+        
+        if 'tip' in listener or 'tip' in event_type:
             self._handle_tip(event_data)
-        elif listener == 'subscriber' or data.get('type') == 'subscriber':
+        elif 'subscriber' in listener or 'subscriber' in event_type:
             self._handle_subscriber(event_data)
-        elif listener == 'follower' or data.get('type') == 'follower':
+        elif 'follower' in listener or 'follower' in event_type:
             self._handle_follower(event_data)
-        elif listener == 'raid' or data.get('type') == 'raid':
+        elif 'raid' in listener or 'raid' in event_type:
             self._handle_raid(event_data)
-        elif listener == 'cheer' or data.get('type') == 'cheer':
+        elif 'cheer' in listener or 'cheer' in event_type:
             self._handle_cheer(event_data)
-        elif listener == 'host' or data.get('type') == 'host':
+        elif 'host' in listener or 'host' in event_type:
             self._handle_host(event_data)
+        else:
+            print(f"[StreamElements] Неизвестный listener: {listener}")
             
     def _process_chat_message(self, data: Dict):
+        """Обработка сообщения чата"""
         username = data.get('displayName', data.get('username', 'Аноним'))
         message = data.get('message', data.get('text', ''))
         
@@ -183,8 +202,9 @@ class StreamElementsClient:
         print(f"[ЧАТ] {username}: {message}")
         
     def _handle_tip(self, data: Dict):
+        """Обработка доната"""
         username = data.get('username', data.get('name', 'Аноним'))
-        amount = data.get('amount', 0)
+        amount = float(data.get('amount', 0))
         currency = data.get('currency', 'USD')
         tip_message = data.get('message', '')
         
@@ -214,6 +234,7 @@ class StreamElementsClient:
         print(f"[ДОНАТ] {username}: {amount} {currency} - {tip_message}")
         
     def _handle_subscriber(self, data: Dict):
+        """Обработка подписки"""
         username = data.get('username', data.get('name', 'Аноним'))
         tier = data.get('tier', '1000')
         months = data.get('amount', data.get('months', 1))
@@ -245,6 +266,7 @@ class StreamElementsClient:
             print(f"[ПОДПИСКА] {username} подписался! ({tier_name}, {months} мес.)")
             
     def _handle_follower(self, data: Dict):
+        """Обработка фолловера"""
         username = data.get('username', data.get('name', 'Аноним'))
         
         self.viewer_stats['total_followers'] += 1
@@ -260,6 +282,7 @@ class StreamElementsClient:
         print(f"[ФОЛЛОУ] {username} подписался на канал!")
         
     def _handle_raid(self, data: Dict):
+        """Обработка рейда"""
         username = data.get('username', data.get('name', 'Аноним'))
         viewers = data.get('amount', data.get('viewers', 0))
         
@@ -277,6 +300,7 @@ class StreamElementsClient:
         print(f"[РЕЙД] {username} ворвался с {viewers} зрителями!")
         
     def _handle_cheer(self, data: Dict):
+        """Обработка битов (cheer)"""
         username = data.get('username', data.get('name', 'Аноним'))
         amount = data.get('amount', 0)
         message = data.get('message', '')
@@ -296,6 +320,7 @@ class StreamElementsClient:
         print(f"[БИТЫ] {username}: {amount} битов - {message}")
         
     def _handle_host(self, data: Dict):
+        """Обработка хоста"""
         username = data.get('username', data.get('name', 'Аноним'))
         viewers = data.get('amount', data.get('viewers', 0))
         
@@ -313,22 +338,28 @@ class StreamElementsClient:
         print(f"[ХОСТ] {username} хостит канал с {viewers} зрителями!")
         
     def _on_error(self, ws, error):
+        """Обработчик ошибок"""
         print(f"[StreamElements] Ошибка: {error}")
         
     def _on_close(self, ws, close_status_code, close_msg):
+        """Обработчик закрытия соединения"""
         self.is_connected = False
         print(f"[StreamElements] Соединение закрыто: {close_status_code} - {close_msg}")
         
     def disconnect(self):
+        """Отключение от StreamElements"""
         self.is_connected = False
         if self.ws:
             self.ws.close()
             
     def get_chat_history(self, limit: int = 50) -> List[Dict]:
+        """Получение истории чата"""
         return list(self.chat_history)[-limit:]
         
     def get_recent_events(self, limit: int = 20) -> List[StreamEvent]:
+        """Получение последних событий"""
         return list(self.events_history)[-limit:]
         
     def get_viewer_stats(self) -> Dict:
+        """Получение статистики зрителей"""
         return self.viewer_stats.copy()
