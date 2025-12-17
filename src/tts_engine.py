@@ -53,11 +53,23 @@ class TTSEngine:
         'gentle': {'rate': '-15%', 'pitch': '+2Hz', 'volume': '-10%'},
     }
     
+    EMOTION_INTENSITY = {
+        'neutral': 0.5,
+        'excited': 1.0,
+        'happy': 0.8,
+        'sad': 0.3,
+        'supportive': 0.6,
+        'sarcastic': 0.4,
+        'tense': 0.9,
+        'gentle': 0.4,
+    }
+    
     def __init__(self, 
                  voice: str = 'ru_female_soft',
                  rate: int = 0,
                  volume: float = 1.0,
-                 lang: str = 'ru'):
+                 lang: str = 'ru',
+                 visual_callback: Optional[Callable] = None):
         """
         Инициализация TTS движка
         
@@ -71,6 +83,7 @@ class TTSEngine:
         self.base_rate = rate
         self.base_volume = volume
         self.lang = lang
+        self.visual_callback = visual_callback
         
         self.speech_queue = queue.Queue()
         self.is_speaking = False
@@ -154,8 +167,8 @@ class TTSEngine:
             print(f"[TTS] Ошибка синтеза: {e}")
             return None
     
-    def _play_audio(self, file_path: str) -> bool:
-        """Воспроизведение аудио файла"""
+    def _play_audio(self, file_path: str, emotion: str = 'neutral') -> bool:
+        """Воспроизведение аудио файла с визуальной обратной связью"""
         if not self.playback_available:
             print(f"[TTS] Воспроизведение пропущено (нет аудио): {os.path.basename(file_path)}")
             return False
@@ -174,14 +187,29 @@ class TTSEngine:
             pygame.mixer.music.set_volume(self.base_volume)
             pygame.mixer.music.play()
             
+            intensity = self.EMOTION_INTENSITY.get(emotion, 0.5)
+            if self.visual_callback:
+                self.visual_callback(True, intensity)
+            
+            pulse_phase = 0
             while pygame.mixer.music.get_busy() and not self.stop_flag:
+                if self.visual_callback:
+                    import math
+                    pulse_intensity = intensity * (0.7 + 0.3 * math.sin(pulse_phase * 8))
+                    self.visual_callback(True, pulse_intensity)
+                    pulse_phase += 0.05
                 time.sleep(0.05)
+            
+            if self.visual_callback:
+                self.visual_callback(False, 0)
             
             pygame.mixer.music.stop()
             return True
             
         except Exception as e:
             print(f"[TTS] Ошибка воспроизведения: {e}")
+            if self.visual_callback:
+                self.visual_callback(False, 0)
             return False
         finally:
             try:
@@ -212,7 +240,7 @@ class TTSEngine:
                 )
                 
                 if audio_file:
-                    success = self._play_audio(audio_file)
+                    success = self._play_audio(audio_file, emotion)
                     if callback:
                         callback(success)
                 
@@ -288,6 +316,10 @@ class TTSEngine:
     def set_volume(self, volume: float):
         """Установить громкость (0.0-1.0)"""
         self.base_volume = max(0.0, min(1.0, volume))
+    
+    def set_visual_callback(self, callback: Optional[Callable]):
+        """Установить callback для визуальной обратной связи"""
+        self.visual_callback = callback
     
     def stop(self):
         """Остановить движок"""

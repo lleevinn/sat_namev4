@@ -19,6 +19,7 @@ from src.streamelements_client import StreamElementsClient, StreamEvent
 from src.iris_brain import IrisBrain
 from src.windows_audio import WindowsAudioController
 from src.achievements import AchievementSystem, Achievement
+from src.iris_visual import IrisVisual
 
 
 class IrisAssistant:
@@ -43,11 +44,15 @@ class IrisAssistant:
         
         self.is_running = False
 
+        print("[IRIS] Инициализация визуального интерфейса (IO-style)...")
+        self.visual = IrisVisual(width=400, height=400)
+        
         print("[IRIS] Инициализация TTS (нежный женский голос)...")
         self.tts = TTSEngine(
             voice=self.CONFIG["tts_voice"],
             rate=self.CONFIG["tts_rate"],
-            volume=self.CONFIG["tts_volume"]
+            volume=self.CONFIG["tts_volume"],
+            visual_callback=self._on_visual_update
         )
 
         print("[IRIS] Инициализация AI мозга...")
@@ -81,6 +86,11 @@ class IrisAssistant:
         
         print()
         print("[IRIS] ✅ Все компоненты инициализированы")
+    
+    def _on_visual_update(self, speaking: bool, intensity: float):
+        """Обновление визуального интерфейса при разговоре"""
+        if hasattr(self, 'visual') and self.visual:
+            self.visual.set_speaking(speaking, intensity)
         
     def _on_wake_word(self):
         """Обработка обнаружения wake word"""
@@ -264,6 +274,16 @@ class IrisAssistant:
         """Запуск Ирис"""
         self.is_running = True
         
+        print("\n[IRIS] 🚀 Запуск визуального интерфейса (Iron Man startup)...")
+        
+        def on_startup_complete():
+            print("[IRIS] ✨ Анимация запуска завершена!")
+            self.tts.speak("Привет! Я Ирис, готова к стриму!", emotion='happy')
+        
+        self.visual_thread = self.visual.run_async(on_startup_complete)
+        
+        time.sleep(0.5)
+        
         print("\n[IRIS] Запуск CS2 Game State Integration...")
         self.cs2_gsi.start()
         self.cs2_gsi.save_config_file()
@@ -298,14 +318,14 @@ class IrisAssistant:
         print("   🎤 Голосовое управление (скажите 'Ирис')")
         print("   🔊 Управление громкостью приложений")
         print("   🏆 Система достижений")
+        print("   ✨ Визуальный интерфейс IO-style")
         print()
         print("🎤 Голос: Нежный женский (Edge TTS)")
         print("🧠 AI: Groq LLM (бесплатно)")
+        print("👁️ Визуал: IO-style пульсирующий шар")
         print()
-        print("Нажмите Ctrl+C для остановки")
+        print("Нажмите Ctrl+C или ESC в окне для остановки")
         print("=" * 60)
-        
-        self.tts.speak("Привет! Я Ирис, готова к стриму!", emotion='happy')
         
     def stop(self):
         """Остановка Ирис"""
@@ -313,6 +333,9 @@ class IrisAssistant:
         self.is_running = False
         
         self.achievements.save_stats()
+        
+        if hasattr(self, 'visual') and self.visual:
+            self.visual.stop()
         
         self.voice_input.stop()
         self.stream_elements.disconnect()
@@ -334,8 +357,12 @@ class IrisAssistant:
         
         try:
             while self.is_running:
+                if hasattr(self, 'visual') and self.visual and not self.visual.running:
+                    break
                 time.sleep(1)
         except KeyboardInterrupt:
+            pass
+        finally:
             self.stop()
 
 
